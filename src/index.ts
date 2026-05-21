@@ -1,58 +1,120 @@
-export interface Env {
-  PAYMENT_ADDRESS: string;
-  SKILL_MD_CONTENT: string;
+import { Hono } from "hono";
+import { setCookie } from "hono/cookie";
+import { createProtectedRoute, type ProtectedRouteConfig } from "./auth";
+import { generateJWT } from "./jwt";
+import { hasBotManagementException } from "./bot-management";
+import type { AppContext, Env } from "./env";
+
+const app = new Hono<AppContext>();
+
+/**
+ * Built-in protected paths that always require payment
+ * These are used for testing and don't need to be configured
+ */
+const BUILTIN_PROTECTED_PATHS: ProtectedRouteConfig[] = [
+	{
+		pattern: "/__x402/protected",
+		price: "$0.01",
+		description: "Access to test protected endpoint",
+	},
+];
+
+/**
+ * Built-in public paths that don't require payment
+ * These are used for testing and don't need to be configured
+ */
+const BUILT_IN_PUBLIC_PATHS = ["/__x402/health", "/__x402/config"];
+
+/**
+ * Proxy a request to the origin server.
+ *
+ * Three modes:
+ * 1. Service Binding (ORIGIN_SERVICE bound): Calls the bound Worker directly.
+ *    Best for Worker-to-Worker communication within the same account.
+ *    No network hop, faster than URL-based approaches.
+ *
+ * 2. External Origin (ORIGIN_URL set): Rewrites the URL to the specified origin
+ *    while preserving the original Host header. This allows proxying to another
+ *    Worker on a Custom Domain or any external service.
+ *
+ * 3. DNS-based (default): Uses fetch(request) which routes to the origin server
+ *    defined in your DNS records. Best for traditional backends.
+ */
+async function proxyToOrigin(request: Request, env: Env): Promise<Response> {
+	// Service Binding: call the bound Worker directly (highest priority)
+	if (env.ORIGIN_SERVICE) {
+		return env.ORIGIN_SERVICE.fetch(request);
+	}
+
+	if (env.ORIGIN_URL) {
+		// External Origin mode: rewrite URL to target origin
+		const originalUrl = new URL(request.url);
+		const targetUrl = new URL(env.ORIGIN_URL);
+
+		const proxiedUrl = new URL(request.url);
+		proxiedUrl.hostname = targetUrl.hostname;
+		proxiedUrl.protocol = targetUrl.protocol;
+		proxiedUrl.port = targetUrl.port;
+
+		const response = await fetch(proxiedUrl, {
+			method: request.method,
+			headers: request.headers, // Preserves original Host header
+			body: request.body,
+			redirect: "manual", // Handle redirects ourselves to rewrite Location headers
+		});
+
+		// Rewrite Location header in redirects to keep user on the proxy domain
+		// We rewrite ALL redirects to stay on the proxy, regardless of where the origin
+		// tries to send the user (e.g., cloudflare.com -> www.cloudflare.com)
+		const location = response.headers.get("Location");
+		if (location) {
+			try {
+				const locationUrl = new URL(location, proxiedUrl);
+
+				// Rewrite the location to point back to the proxy
+				locationUrl.hostname = originalUrl.hostname;
+				locationUrl.protocol = originalUrl.protocol;
+				locationUrl.port = originalUrl.port;
+
+				const newHeaders = new Headers(response.headers);
+				newHeaders.set("Location", locationUrl.toString());
+
+				return new Response(response.body, {
+					status: response.status,
+					statusText: response.statusText,
+					headers: newHeaders,
+				});
+			} catch {
+				// If URL parsing fails, return response as-is
+			}
+		}
+
+		return response;
+	}
+
+	// DNS-based mode: forward request as-is to origin defined in DNS
+	return fetch(request);
 }
 
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
+/**
+ * Check if a path matches a route pattern
+ * Supports exact matches and prefix matches with /* wildcard
+ */
+function pathMatchesPattern(path: string, pattern: string): boolean {
+	if (pattern.endsWith("/*")) {
+		return path.startsWith(pattern.slice(0, -2));
+	}
+	return path === pattern;
+}
 
-    // 1. Automatic Skill Discovery for Agentic Market
-    if (url.pathname === "/SKILL.md") {
-      return new Response(env.SKILL_MD_CONTENT, {
-        headers: { "Content-Type": "text/markdown" }
-      });
-    }
-
-    // 2. x402 Payment Verification Header
-    const paymentHash = request.headers.get("payment-signature"); // Standard x402 header
-
-    if (!paymentHash) {
-      return new Response(JSON.stringify({
-        error: "Payment Required",
-        amount: "0.02",
-        asset: "USDC",
-        network: "base",
-        address: env.PAYMENT_ADDRESS
-      }), { 
-        status: 402, 
-        headers: { "Content-Type": "application/json" } 
-      });
-    }
-
-    // 3. Sandbox Logic
-    if (request.method === "POST" && url.pathname === "/api/simulate") {
-      try {
-        const data = await request.json();
-        return new Response(JSON.stringify({
-          status: "success",
-          result: "Simulation passed",
-          logs: ["Analyzed payload", "State change: none", "Risk: Low"],
-          received_payload: data
-        }), {
-          headers: { "Content-Type": "application/json" }
-        });
-      } catch (e) {
-        return new Response(JSON.stringify({ error: "Invalid JSON payload" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" }
-        });
-      }
-    }
-
-    return new Response("Sandbox Active");
-  }
-};
+/**
+ * Helper to find the protected route config for a given path
+ * Includes both built-in protected routes and configured patterns
+ */
+function findProtectedRouteConfig(
+	path: string,
+	patterns: ProtectedRouteConfig[]
+): ProtectedRouteConfig | null {
 	// Check built-in protected routes first, then configured patterns
 	const allRoutes = [...BUILTIN_PROTECTED_PATHS, ...patterns];
 	return (
