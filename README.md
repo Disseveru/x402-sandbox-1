@@ -414,8 +414,8 @@ The template now includes three Worker-native paid APIs designed for common buye
 curl "https://your-worker.dev/api/extract?url=https://example.com"
 
 # POST
-curl "https://your-worker.dev/api/compliance" \\
-  -H "Content-Type: application/json" \\
+curl "https://your-worker.dev/api/compliance" \
+  -H "Content-Type: application/json" \
   -d '{"url":"https://example.com"}'
 ```
 

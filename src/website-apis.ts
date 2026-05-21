@@ -9,6 +9,8 @@ const MAX_HEADINGS = 12;
 const MAX_PARAGRAPHS = 8;
 const MAX_CTAS = 10;
 const MAX_FAQS = 6;
+const MAX_FAQ_TEXT_LENGTH = 220;
+const MIN_PARAGRAPH_LENGTH = 60;
 const MAX_TEXT_SNIPPET_LENGTH = 2_000;
 
 const CTA_KEYWORDS = [
@@ -62,8 +64,8 @@ function normalizeText(value: string): string {
 function stripTags(value: string): string {
 	return normalizeText(
 		value
-			.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, " ")
-			.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, " ")
+			.replace(/<script\b[\s\S]*?<\/script\b[^>]*>/gi, " ")
+			.replace(/<style\b[\s\S]*?<\/style\b[^>]*>/gi, " ")
 			.replace(/<[^>]+>/g, " ")
 	);
 }
@@ -71,7 +73,6 @@ function stripTags(value: string): string {
 function decodeHtmlEntities(value: string): string {
 	return value
 		.replace(/&nbsp;/gi, " ")
-		.replace(/&amp;/gi, "&")
 		.replace(/&quot;/gi, '"')
 		.replace(/&#39;/gi, "'")
 		.replace(/&lt;/gi, "<")
@@ -230,8 +231,9 @@ async function fetchHtmlPage(url: URL): Promise<FetchedHtml> {
 	let response: Response;
 	try {
 		response = await fetchWithTimeout(url, FETCH_TIMEOUT_MS);
-	} catch {
-		throw new Error("fetch_failed");
+	} catch (error) {
+		const reason = error instanceof Error ? error.message : "request_error";
+		throw new Error(`fetch_failed:${reason}`);
 	}
 
 	if (!response.ok) {
@@ -316,7 +318,9 @@ function pickSocialLinks(links: ParsedLink[]): string[] {
 
 function inferCategoryHints(text: string, links: ParsedLink[]): string[] {
 	const normalized = text.toLowerCase();
-	const hrefs = links.map((link) => link.href.toLowerCase()).join(" ");
+	const hasBlogLinks = links.some((link) =>
+		/\/blog|\/news/.test(link.href.toLowerCase())
+	);
 	const hints = new Set<string>();
 
 	if (
@@ -353,7 +357,7 @@ function inferCategoryHints(text: string, links: ParsedLink[]): string[] {
 
 	if (
 		/(newsroom|latest posts|editorial|opinion|subscribe)/.test(normalized) ||
-		/\/blog|\/news/.test(hrefs)
+		hasBlogLinks
 	) {
 		hints.add("blog/media");
 	}
@@ -379,7 +383,7 @@ function extractParagraphs(html: string): string[] {
 		const cleaned = normalizeText(
 			decodeHtmlEntities(stripTags(match[1] || ""))
 		);
-		if (cleaned.length >= 60) {
+		if (cleaned.length >= MIN_PARAGRAPH_LENGTH) {
 			paragraphs.push(cleaned);
 		}
 	}
@@ -416,7 +420,7 @@ function extractFaqBlocks(html: string): string[] {
 		const candidate = normalizeText(
 			decodeHtmlEntities(stripTags(match[2] || ""))
 		);
-		if (candidate.includes("?") && candidate.length <= 220) {
+		if (candidate.includes("?") && candidate.length <= MAX_FAQ_TEXT_LENGTH) {
 			faqMatches.push(candidate);
 		}
 	}
@@ -426,25 +430,24 @@ function extractFaqBlocks(html: string): string[] {
 
 function detectComplianceSignals(text: string, links: ParsedLink[]) {
 	const normalizedText = text.toLowerCase();
-	const sameOriginLinks = links
+	const sameOriginLinkSignals = links
 		.filter((link) => link.isSameOrigin)
-		.map((link) => `${link.text} ${link.href}`.toLowerCase())
-		.join(" ");
+		.map((link) => `${link.text} ${link.href}`.toLowerCase());
+	const hasInLinks = (pattern: RegExp) =>
+		sameOriginLinkSignals.some((entry) => pattern.test(entry));
 
-	const hasPrivacy =
-		/privacy/.test(normalizedText) || /privacy/.test(sameOriginLinks);
+	const hasPrivacy = /privacy/.test(normalizedText) || hasInLinks(/privacy/);
 	const hasTerms =
 		/terms|conditions|tos/.test(normalizedText) ||
-		/terms|conditions|tos/.test(sameOriginLinks);
+		hasInLinks(/terms|conditions|tos/);
 	const hasRefund =
-		/refund|returns?/.test(normalizedText) ||
-		/refund|returns?/.test(sameOriginLinks);
+		/refund|returns?/.test(normalizedText) || hasInLinks(/refund|returns?/);
 	const hasCookie = /cookie|consent/.test(normalizedText);
 	const hasPricing =
-		/pricing|plans|subscription|\$\d/.test(normalizedText) ||
-		/pricing|plans/.test(sameOriginLinks);
+		/pricing|plans|subscription|\$\d+/.test(normalizedText) ||
+		hasInLinks(/pricing|plans/);
 	const hasContact =
-		/contact/.test(sameOriginLinks) ||
+		hasInLinks(/contact/) ||
 		/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text) ||
 		/\+?[0-9][0-9\s().-]{7,}/.test(text);
 
@@ -510,6 +513,15 @@ function mapFetchErrorToResponse(
 			{
 				error: "Target URL fetch failed",
 				detail: message.replace("fetch_failed_status_", "status_"),
+			},
+			502
+		);
+	}
+	if (message.startsWith("fetch_failed:")) {
+		return c.json(
+			{
+				error: "Target URL fetch failed",
+				detail: message.replace("fetch_failed:", ""),
 			},
 			502
 		);

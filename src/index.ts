@@ -287,8 +287,7 @@ app.use("*", async (c, next) => {
 	if (isBuiltInApiPath(path)) {
 		return c.json(
 			{
-				error:
-					"Server misconfigured: add this API path to PROTECTED_PATTERNS in wrangler.jsonc.",
+				error: `Built-in API endpoint requires payment protection. Add '${path}' to PROTECTED_PATTERNS or remove this endpoint.`,
 			},
 			500
 		);
