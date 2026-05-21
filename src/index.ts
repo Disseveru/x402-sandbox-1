@@ -23,7 +23,8 @@ const BUILTIN_PROTECTED_PATHS: ProtectedRouteConfig[] = [
  * Built-in public paths that don't require payment
  * These are used for testing and don't need to be configured
  */
-const BUILT_IN_PUBLIC_PATHS = ["/__x402/health", "/__x402/config"];
+const BUILTIN_PUBLIC_PATHS = ["/__x402/health", "/__x402/config"];
+const BUILT_IN_PUBLIC_PATHS = BUILTIN_PUBLIC_PATHS;
 
 /**
  * Proxy a request to the origin server.
