@@ -34,7 +34,7 @@ npm run test:client
 
 The test client will:
 
-1. ✅ Request `/premium` without payment (receives 402)
+1. ✅ Request `/__x402/protected` without payment (receives 402)
 2. ✅ Create and sign a payment with your wallet
 3. ✅ Submit the payment and receive premium content
 4. ✅ Extract the JWT cookie from the response
@@ -48,7 +48,7 @@ The test client will:
 Server: http://localhost:8787
 Network: Base Sepolia (testnet)
 
-📝 Step 1: Requesting /premium without payment...
+📝 Step 1: Requesting /__x402/protected without payment...
 ✅ Received 402 Payment Required
    Payment needed: 10000
    Description: Access to premium content for 1 hour
@@ -89,10 +89,10 @@ curl http://localhost:8787/__x402/health
 # Should return: {"status":"ok","proxy":"x402-proxy","message":"This endpoint is always public",...}
 ```
 
-### 2. Request protected endpoint without payment
+### 2. Request built-in protected endpoint without payment
 
 ```bash
-curl -v http://localhost:8787/premium
+curl -v http://localhost:8787/__x402/protected
 ```
 
 You should receive:
@@ -124,7 +124,7 @@ const encodedPayment = exact.evm.encodePayment(payment);
 Then submit with the `X-PAYMENT` header:
 
 ```bash
-curl -v http://localhost:8787/premium \
+curl -v http://localhost:8787/__x402/protected \
   -H "X-PAYMENT: <base64-encoded-payment>"
 ```
 
@@ -133,7 +133,7 @@ curl -v http://localhost:8787/premium \
 After a successful payment, extract the `auth_token` cookie from the `Set-Cookie` header, then:
 
 ```bash
-curl http://localhost:8787/premium \
+curl http://localhost:8787/__x402/protected \
   -H "Cookie: auth_token=<your-jwt-token>"
 ```
 

@@ -60,7 +60,7 @@
 		// Get testnet tokens: https://docs.cdp.coinbase.com/faucets/
 		// Supported networks: https://x402.org
 		//
-		"NETWORK": "base-mainnet",
+		"NETWORK": "base-sepolia",
 		// =====================================================================
 		// PROTECTED_PATTERNS - Routes requiring payment (REQUIRED)
 		// =====================================================================
@@ -83,13 +83,20 @@
 		// This enables "default closed" - humans pass free, bots must pay.
 		//
 		"PROTECTED_PATTERNS": [
-			// ─────────────────────────────────────────────────────────────────
-			// Example: Basic - All traffic must pay
-			// ─────────────────────────────────────────────────────────────────
 			{
-				"pattern": "/premium/*",
+				"pattern": "/api/enrich",
 				"price": "$0.01",
-				"description": "Access to premium content for 1 hour",
+				"description": "Lead enrichment signals for a target website",
+			},
+			{
+				"pattern": "/api/compliance",
+				"price": "$0.02",
+				"description": "Heuristic trust/compliance signal detection",
+			},
+			{
+				"pattern": "/api/extract",
+				"price": "$0.01",
+				"description": "LLM-friendly structured content extraction",
 			},
 
 			// ─────────────────────────────────────────────────────────────────

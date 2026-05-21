@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>x402 Payment-Gated Proxy</title>
+		<title>x402 Monetized API Sandbox</title>
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link
@@ -330,11 +330,11 @@
 			<!-- Hero Section -->
 			<section class="hero">
 				<img src="/x402-icon.svg" alt="x402 Icon" class="hero-icon" />
-				<h1>Payment-Gated<br /><span>Reverse Proxy</span></h1>
+				<h1>Payment-Gated<br /><span>API Sandbox</span></h1>
 				<p>
-					A Cloudflare Worker that sits in front of any backend and gates access
-					to protected routes with USDC payments. Zero backend modifications
-					required.
+					A Cloudflare Worker template with three built-in monetizable APIs:
+					lead enrichment, compliance signal checks, and LLM-friendly extraction
+					powered by x402 payments.
 				</p>
 				<div class="hero-buttons">
 					<a href="/__x402/protected" class="btn-primary"
@@ -346,60 +346,63 @@
 						>View Documentation</a
 					>
 				</div>
-				<div class="code-badge">/__x402/health &bull; /__x402/protected</div>
+				<div class="code-badge">
+					/api/enrich &bull; /api/compliance &bull; /api/extract
+				</div>
 			</section>
 
 			<!-- Feature Grid -->
 			<section class="feature-grid">
 				<div class="feature-list">
-					<h2>Template Features</h2>
+					<h2>Sandbox Features</h2>
 					<div class="feature-item">
 						<span class="feature-number">01</span>
 						<div class="feature-content">
-							<h3>Transparent Proxying</h3>
+							<h3>Lead Enrichment API</h3>
 							<p>
-								All non-protected requests pass through unchanged to your origin
-								server. Your backend stays untouched.
+								Fetches a target page and returns domain, title, meta
+								description, useful same-origin links, social links, and
+								category hints.
 							</p>
 						</div>
 					</div>
 					<div class="feature-item">
 						<span class="feature-number">02</span>
 						<div class="feature-content">
-							<h3>Pattern-Based Protection</h3>
+							<h3>Compliance Signals API</h3>
 							<p>
-								Configure routes with exact paths like <code>/premium</code> or
-								wildcards like <code>/api/private/*</code>.
+								Detects trust/compliance signals like privacy policy, terms,
+								refund/returns, contact, pricing, and cookie wording indicators.
 							</p>
 						</div>
 					</div>
 					<div class="feature-item">
 						<span class="feature-number">03</span>
 						<div class="feature-content">
-							<h3>JWT Session Caching</h3>
+							<h3>LLM Extraction API</h3>
 							<p>
-								After payment, a secure HttpOnly cookie grants 1-hour access
-								without additional payments.
+								Returns title, description, headings, key paragraphs, CTA links,
+								and FAQ-like content for downstream AI/agent use.
 							</p>
 						</div>
 					</div>
 					<div class="feature-item">
 						<span class="feature-number">04</span>
 						<div class="feature-content">
-							<h3>Configurable Pricing</h3>
+							<h3>x402 Payment Gate</h3>
 							<p>
-								Set custom USDC prices per route. Works on Base Sepolia
-								(testnet) or Base mainnet.
+								Route-specific pricing in <code>PROTECTED_PATTERNS</code> with
+								cookie-based session reuse after successful payment.
 							</p>
 						</div>
 					</div>
 					<div class="feature-item">
 						<span class="feature-number">05</span>
 						<div class="feature-content">
-							<h3>Edge-Native</h3>
+							<h3>Worker-Native & Lightweight</h3>
 							<p>
-								Runs entirely on Cloudflare Workers. Stateless design with no
-								server-side session storage.
+								Built with Cloudflare Worker-compatible fetch and deterministic
+								heuristics (no headless browser dependencies required).
 							</p>
 						</div>
 					</div>
@@ -683,7 +686,7 @@
 
 			<!-- Test Endpoints Section -->
 			<section class="test-section">
-				<h2>Built-in Test Endpoints</h2>
+				<h2>Built-in Endpoints</h2>
 				<div class="endpoint-grid">
 					<div class="endpoint-card">
 						<h3><span class="method">GET</span> Health Check</h3>
@@ -700,6 +703,33 @@
 						<p>
 							Test payment flow without an origin server. Requires valid payment
 							or session cookie to access.
+						</p>
+						<span class="status protected">Requires payment</span>
+					</div>
+					<div class="endpoint-card">
+						<h3><span class="method">GET/POST</span> Enrich</h3>
+						<div class="path">/api/enrich?url=example.com</div>
+						<p>
+							Paid endpoint (~$0.01) for lightweight lead enrichment signals
+							from a target website.
+						</p>
+						<span class="status protected">Requires payment</span>
+					</div>
+					<div class="endpoint-card">
+						<h3><span class="method">GET/POST</span> Compliance</h3>
+						<div class="path">/api/compliance?url=example.com</div>
+						<p>
+							Paid endpoint (~$0.02) for heuristic trust/compliance detection
+							signals. Informational only, not legal advice.
+						</p>
+						<span class="status protected">Requires payment</span>
+					</div>
+					<div class="endpoint-card">
+						<h3><span class="method">GET/POST</span> Extract</h3>
+						<div class="path">/api/extract?url=example.com</div>
+						<p>
+							Paid endpoint (~$0.01) that returns LLM-friendly content blocks
+							for sales and research agents.
 						</p>
 						<span class="status protected">Requires payment</span>
 					</div>

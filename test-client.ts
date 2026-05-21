@@ -16,6 +16,7 @@ import { createPaymentHeader } from "x402/client";
 // Configuration
 const SERVER_URL = process.env.SERVER_URL || "http://localhost:8787";
 const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
+const TEST_PATH = "/__x402/protected";
 
 if (!PRIVATE_KEY) {
 	console.error("❌ Error: PRIVATE_KEY environment variable is required");
@@ -48,8 +49,8 @@ async function main() {
 	console.log(`Network: Base Sepolia (testnet)\n`);
 
 	// Step 1: Request without payment (should get 402)
-	console.log("📝 Step 1: Requesting /premium without payment...");
-	const initialResponse = await fetch(`${SERVER_URL}/premium`);
+	console.log(`📝 Step 1: Requesting ${TEST_PATH} without payment...`);
+	const initialResponse = await fetch(`${SERVER_URL}${TEST_PATH}`);
 
 	if (initialResponse.status !== 402) {
 		console.error(`❌ Expected 402, got ${initialResponse.status}`);
@@ -89,7 +90,7 @@ async function main() {
 	// Step 3: Retry request with payment
 	console.log("📤 Step 3: Sending request with payment...");
 
-	const paidResponse = await fetch(`${SERVER_URL}/premium`, {
+	const paidResponse = await fetch(`${SERVER_URL}${TEST_PATH}`, {
 		headers: {
 			"X-PAYMENT": paymentHeader,
 		},
@@ -128,7 +129,7 @@ async function main() {
 	console.log("   Waiting 2 seconds...");
 	await new Promise((resolve) => setTimeout(resolve, 2000));
 
-	const cookieResponse = await fetch(`${SERVER_URL}/premium`, {
+	const cookieResponse = await fetch(`${SERVER_URL}${TEST_PATH}`, {
 		headers: {
 			Cookie: `auth_token=${authToken}`,
 		},

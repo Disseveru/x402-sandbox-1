@@ -4,6 +4,12 @@ import { createProtectedRoute, type ProtectedRouteConfig } from "./auth";
 import { generateJWT } from "./jwt";
 import { hasBotManagementException } from "./bot-management";
 import type { AppContext, Env } from "./env";
+import {
+	handleCompliance,
+	handleEnrich,
+	handleExtract,
+	isBuiltInApiPath,
+} from "./website-apis";
 
 const app = new Hono<AppContext>();
 
@@ -162,6 +168,9 @@ app.use("*", async (c, next) => {
 			if (path === "/__x402/protected") {
 				return next();
 			}
+			if (isBuiltInApiPath(path)) {
+				return next();
+			}
 			return proxyToOrigin(c.req.raw, c.env);
 		}
 
@@ -224,6 +233,22 @@ app.use("*", async (c, next) => {
 			await next();
 			return c.res;
 		}
+		if (isBuiltInApiPath(path)) {
+			// If we generated a JWT token, set the cookie BEFORE calling next()
+			// so it's included in the route response
+			if (jwtToken) {
+				setCookie(c, "auth_token", jwtToken, {
+					httpOnly: true,
+					secure: true,
+					sameSite: "Strict",
+					maxAge: 3600,
+					path: "/",
+				});
+			}
+
+			await next();
+			return c.res;
+		}
 
 		// Proxy the authenticated request to origin
 		const originResponse = await proxyToOrigin(c.req.raw, c.env);
@@ -258,6 +283,15 @@ app.use("*", async (c, next) => {
 
 		// Otherwise, return origin response as-is
 		return originResponse;
+	}
+	if (isBuiltInApiPath(path)) {
+		return c.json(
+			{
+				error:
+					"Server misconfigured: add this API path to PROTECTED_PATTERNS in wrangler.jsonc.",
+			},
+			500
+		);
 	}
 
 	// Proxy unprotected routes directly to origin
@@ -317,6 +351,31 @@ app.get("/__x402/protected", (c) => {
 		timestamp: Date.now(),
 		note: "This endpoint always requires payment or valid authentication cookie",
 	});
+});
+
+/**
+ * Monetizable API endpoints implemented directly in the Worker.
+ * These paths should be configured under PROTECTED_PATTERNS to require x402 payment.
+ */
+app.all("/api/enrich", (c) => {
+	if (!["GET", "POST"].includes(c.req.method)) {
+		return c.json({ error: "Method not allowed. Use GET or POST." }, 405);
+	}
+	return handleEnrich(c);
+});
+
+app.all("/api/compliance", (c) => {
+	if (!["GET", "POST"].includes(c.req.method)) {
+		return c.json({ error: "Method not allowed. Use GET or POST." }, 405);
+	}
+	return handleCompliance(c);
+});
+
+app.all("/api/extract", (c) => {
+	if (!["GET", "POST"].includes(c.req.method)) {
+		return c.json({ error: "Method not allowed. Use GET or POST." }, 405);
+	}
+	return handleExtract(c);
 });
 
 export default app;

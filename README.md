@@ -2,12 +2,15 @@
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/templates/tree/main/x402-proxy-template)
 
-A Cloudflare Worker that acts as a transparent proxy with payment-gated access using the [x402 protocol](https://x402.org) and stateless cookie-based authentication.
+A Cloudflare Worker that acts as a transparent proxy with payment-gated access using the [x402 protocol](https://x402.org), stateless cookie-based authentication, and three monetizable API examples.
 
 **Live Demo** - Try the built-in endpoints (other routes will fail as no origin is configured):
 
 - [/\_\_x402/health](https://x402proxy-template.news.eti.cfdata.org/__x402/health) - Public health check (200 OK)
 - [/\_\_x402/protected](https://x402proxy-template.news.eti.cfdata.org/__x402/protected) - Protected endpoint (402 Payment Required)
+- `/api/enrich?url=example.com` - Paid lead enrichment signals endpoint
+- `/api/compliance?url=example.com` - Paid trust/compliance signals endpoint
+- `/api/extract?url=example.com` - Paid LLM-friendly extraction endpoint
 
 <!-- dash-content-start -->
 
@@ -20,6 +23,7 @@ This template implements a **smart proxy** that:
 3. **Requires payment** via the x402 protocol for protected routes
 4. **Issues JWT cookies** valid for 1 hour after payment
 5. **Allows access** to protected routes without additional payments during the valid period
+6. **Ships built-in monetizable API endpoints** for enrichment, compliance signals, and extraction
 
 > **Note:** This template is configured for Base Sepolia testnet. For production, update `NETWORK` in `wrangler.jsonc` to a mainnet network (e.g., `"base"`).
 
@@ -144,14 +148,19 @@ Each entry defines a protected route and its payment requirements:
 ```jsonc
 "PROTECTED_PATTERNS": [
   {
-    "pattern": "/premium/*",
+    "pattern": "/api/enrich",
     "price": "$0.01",
-    "description": "Access to premium content for 1 hour"
+    "description": "Lead enrichment signals for a target website"
   },
   {
-    "pattern": "/api/pro/*",
-    "price": "$0.10",
-    "description": "Pro API access"
+    "pattern": "/api/compliance",
+    "price": "$0.02",
+    "description": "Heuristic trust/compliance signal detection"
+  },
+  {
+    "pattern": "/api/extract",
+    "price": "$0.01",
+    "description": "LLM-friendly structured content extraction"
   }
 ]
 ```
@@ -314,7 +323,7 @@ The proxy uses a custom JWT implementation built on Web Crypto API:
 
 #### Payment Flow
 
-1. Client requests protected route (e.g., `/premium`) without cookie
+1. Client requests protected route (e.g., `/api/enrich`) without cookie
 2. Proxy responds with `402 Payment Required` + payment details
 3. Client creates signed payment (e.g., for USDC on Base Sepolia)
 4. Client retries request with `X-PAYMENT` header
@@ -358,20 +367,56 @@ Routes matching `PROTECTED_PATTERNS` require payment or a valid authentication c
 - Validates JWT signature and expiration
 - Proxies request to origin immediately (no payment required)
 
-### Example: `/premium` endpoint
+### Example: `/api/enrich` endpoint
 
 ```bash
 # First request without auth
-curl https://your-worker.dev/premium
+curl "https://your-worker.dev/api/enrich?url=example.com"
 # → 402 Payment Required
 
 # Request with payment
-curl https://your-worker.dev/premium -H "X-PAYMENT: <encoded-payment>"
-# → Cookie issued + request proxied to origin
+curl "https://your-worker.dev/api/enrich?url=example.com" -H "X-PAYMENT: <encoded-payment>"
+# → Cookie issued + enrichment JSON response
 
 # Subsequent requests with cookie
-curl https://your-worker.dev/premium -H "Cookie: auth_token=..."
-# → Proxied to origin (no payment needed)
+curl "https://your-worker.dev/api/enrich?url=example.com" -H "Cookie: auth_token=..."
+# → JSON response (no payment needed)
+```
+
+## Monetizable Example APIs
+
+The template now includes three Worker-native paid APIs designed for common buyer-facing use cases.
+
+### 1) `/api/enrich` - Lightweight lead enrichment
+
+- Accepts target website via query (`?url=` / `?domain=`) or JSON body (`{"url":"..."}`)
+- Returns normalized URL/domain, title, description, same-origin key links, social links, and category hints
+- Pricing example: **$0.01** (`/api/enrich`)
+
+### 2) `/api/compliance` - Trust/compliance signal detection
+
+- Accepts target website via query or JSON body
+- Returns heuristic signals (privacy, terms, refund/returns, contact, pricing, cookie wording)
+- Produces a risk-flag summary based on detected/non-detected signals
+- Pricing example: **$0.02** (`/api/compliance`)
+- **Important:** Results are informational heuristic signals only and are **not legal advice**.
+
+### 3) `/api/extract` - LLM-friendly content extraction
+
+- Accepts target website via query or JSON body
+- Returns title, description, headings, key paragraphs, CTA links, FAQ-like text, and cleaned snippet
+- Pricing example: **$0.01** (`/api/extract`)
+
+### Request examples
+
+```bash
+# GET
+curl "https://your-worker.dev/api/extract?url=https://example.com"
+
+# POST
+curl "https://your-worker.dev/api/compliance" \\
+  -H "Content-Type: application/json" \\
+  -d '{"url":"https://example.com"}'
 ```
 
 ## Testing
@@ -386,7 +431,7 @@ PRIVATE_KEY=0x... npm run test:client
 
 This will:
 
-1. Request `/premium` without payment (receives 402)
+1. Request `/__x402/protected` without payment (receives 402)
 2. Create and sign a payment with your wallet
 3. Submit payment and receive premium content
 4. Extract JWT cookie
@@ -455,9 +500,9 @@ The proxy mode (DNS-based, External Origin, or Service Binding) determines how r
 ```jsonc
 "PROTECTED_PATTERNS": [
   {
-    "pattern": "/premium",
+    "pattern": "/api/enrich",
     "price": "$0.01",
-    "description": "Access to premium content for 1 hour"
+    "description": "Lead enrichment API"
   }
 ]
 ```
@@ -467,19 +512,19 @@ The proxy mode (DNS-based, External Origin, or Service Binding) determines how r
 ```jsonc
 "PROTECTED_PATTERNS": [
   {
-    "pattern": "/premium",
+    "pattern": "/api/enrich",
     "price": "$0.01",
-    "description": "Basic premium access"
+    "description": "Lead enrichment API"
   },
   {
-    "pattern": "/api/pro/*",
-    "price": "$0.10",
-    "description": "Pro API access"
+    "pattern": "/api/compliance",
+    "price": "$0.02",
+    "description": "Compliance signals API"
   },
   {
-    "pattern": "/dashboard",
-    "price": "$1.00",
-    "description": "Full dashboard access"
+    "pattern": "/api/extract",
+    "price": "$0.01",
+    "description": "LLM extraction API"
   }
 ]
 ```
@@ -489,9 +534,9 @@ The proxy mode (DNS-based, External Origin, or Service Binding) determines how r
 ```jsonc
 "PROTECTED_PATTERNS": [
   {
-    "pattern": "/api/private/*",
-    "price": "$0.05",
-    "description": "Private API access"
+    "pattern": "/api/enrich",
+    "price": "$0.01",
+    "description": "Lead enrichment API"
   }
 ]
 ```
@@ -534,9 +579,9 @@ With **Bot Management for Enterprise** enabled on your domain, x402-proxy can di
 ```jsonc
 "PROTECTED_PATTERNS": [
   {
-    "pattern": "/api/premium/*",
-    "price": "$0.10",
-    "description": "Premium API access",
+    "pattern": "/api/compliance",
+    "price": "$0.02",
+    "description": "Compliance signals API",
     "bot_score_threshold": 30,           // Lower score = more likely automated
     "except_detection_ids": [
       120623194,  // Googlebot
@@ -599,19 +644,19 @@ Simply add a new entry to `PROTECTED_PATTERNS` in `wrangler.jsonc`:
 	"vars": {
 		"PROTECTED_PATTERNS": [
 			{
-				"pattern": "/premium",
+				"pattern": "/api/enrich",
 				"price": "$0.01",
-				"description": "Premium content access",
+				"description": "Lead enrichment API access",
 			},
 			{
-				"pattern": "/api/private/*",
-				"price": "$0.05",
-				"description": "Private API access",
+				"pattern": "/api/compliance",
+				"price": "$0.02",
+				"description": "Compliance signals API access",
 			},
 			{
-				"pattern": "/dashboard",
-				"price": "$0.10",
-				"description": "Dashboard access",
+				"pattern": "/api/extract",
+				"price": "$0.01",
+				"description": "LLM extraction API access",
 			},
 		],
 	},
