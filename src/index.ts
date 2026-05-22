@@ -1,106 +1,29 @@
 import { Hono } from "hono";
-import { setCookie } from "hono/cookie";
 import { createProtectedRoute, type ProtectedRouteConfig } from "./auth";
-import { generateJWT } from "./jwt";
-import { hasBotManagementException } from "./bot-management";
 import type { AppContext, Env } from "./env";
 
 const app = new Hono<AppContext>();
 
-/**
- * Built-in protected paths that always require payment
- * These are used for testing and don't need to be configured
- */
-const BUILTIN_PROTECTED_PATHS: ProtectedRouteConfig[] = [
-	{
-		pattern: "/__x402/protected",
-		price: "$0.01",
-		description: "Access to test protected endpoint",
-	},
-];
+const COMPANY_ANGLE_PATH = "/v1/company-angle";
 
-/**
- * Built-in public paths that don't require payment
- * These are used for testing and don't need to be configured
- */
-const BUILTIN_PUBLIC_PATHS = ["/__x402/health", "/__x402/config"];
-const BUILT_IN_PUBLIC_PATHS = BUILTIN_PUBLIC_PATHS;
+const DEFAULT_COMPANY_ANGLE_PROTECTION: ProtectedRouteConfig = {
+	pattern: COMPANY_ANGLE_PATH,
+	price: "$0.01",
+	description: "Generate one actionable company outreach angle",
+};
 
-/**
- * Proxy a request to the origin server.
- *
- * Three modes:
- * 1. Service Binding (ORIGIN_SERVICE bound): Calls the bound Worker directly.
- *    Best for Worker-to-Worker communication within the same account.
- *    No network hop, faster than URL-based approaches.
- *
- * 2. External Origin (ORIGIN_URL set): Rewrites the URL to the specified origin
- *    while preserving the original Host header. This allows proxying to another
- *    Worker on a Custom Domain or any external service.
- *
- * 3. DNS-based (default): Uses fetch(request) which routes to the origin server
- *    defined in your DNS records. Best for traditional backends.
- */
-async function proxyToOrigin(request: Request, env: Env): Promise<Response> {
-	// Service Binding: call the bound Worker directly (highest priority)
-	if (env.ORIGIN_SERVICE) {
-		return env.ORIGIN_SERVICE.fetch(request);
-	}
-
-	if (env.ORIGIN_URL) {
-		// External Origin mode: rewrite URL to target origin
-		const originalUrl = new URL(request.url);
-		const targetUrl = new URL(env.ORIGIN_URL);
-
-		const proxiedUrl = new URL(request.url);
-		proxiedUrl.hostname = targetUrl.hostname;
-		proxiedUrl.protocol = targetUrl.protocol;
-		proxiedUrl.port = targetUrl.port;
-
-		const response = await fetch(proxiedUrl, {
-			method: request.method,
-			headers: request.headers, // Preserves original Host header
-			body: request.body,
-			redirect: "manual", // Handle redirects ourselves to rewrite Location headers
-		});
-
-		// Rewrite Location header in redirects to keep user on the proxy domain
-		// We rewrite ALL redirects to stay on the proxy, regardless of where the origin
-		// tries to send the user (e.g., cloudflare.com -> www.cloudflare.com)
-		const location = response.headers.get("Location");
-		if (location) {
-			try {
-				const locationUrl = new URL(location, proxiedUrl);
-
-				// Rewrite the location to point back to the proxy
-				locationUrl.hostname = originalUrl.hostname;
-				locationUrl.protocol = originalUrl.protocol;
-				locationUrl.port = originalUrl.port;
-
-				const newHeaders = new Headers(response.headers);
-				newHeaders.set("Location", locationUrl.toString());
-
-				return new Response(response.body, {
-					status: response.status,
-					statusText: response.statusText,
-					headers: newHeaders,
-				});
-			} catch {
-				// If URL parsing fails, return response as-is
-			}
-		}
-
-		return response;
-	}
-
-	// DNS-based mode: forward request as-is to origin defined in DNS
-	return fetch(request);
+interface CompanyAngleRequest {
+	company_name?: string;
+	domain?: string;
+	context?: string[];
+	notes?: string;
 }
 
-/**
- * Normalize a route path for matching by trimming trailing slashes
- * while preserving the root path.
- */
+interface ValidationResult {
+	value?: CompanyAngleRequest;
+	error?: string;
+}
+
 function normalizeRoutePath(path: string): string {
 	if (path === "/") {
 		return path;
@@ -109,10 +32,6 @@ function normalizeRoutePath(path: string): string {
 	return path.replace(/\/+$/, "") || "/";
 }
 
-/**
- * Check if a path matches a route pattern
- * Supports exact matches and prefix matches with /* wildcard
- */
 function pathMatchesPattern(path: string, pattern: string): boolean {
 	const normalizedPath = normalizeRoutePath(path);
 
@@ -124,199 +43,267 @@ function pathMatchesPattern(path: string, pattern: string): boolean {
 	return normalizedPath === normalizeRoutePath(pattern);
 }
 
-/**
- * Helper to find the protected route config for a given path
- * Includes both built-in protected routes and configured patterns
- */
-function findProtectedRouteConfig(
-	path: string,
+function getCompanyAngleProtection(
 	patterns: ProtectedRouteConfig[]
-): ProtectedRouteConfig | null {
-	// Check built-in protected routes first, then configured patterns
-	const allRoutes = [...BUILTIN_PROTECTED_PATHS, ...patterns];
+): ProtectedRouteConfig {
 	return (
-		allRoutes.find((config) => pathMatchesPattern(path, config.pattern)) ?? null
+		patterns.find((config) =>
+			pathMatchesPattern(COMPANY_ANGLE_PATH, config.pattern)
+		) ?? DEFAULT_COMPANY_ANGLE_PROTECTION
 	);
 }
 
-/**
- * Main proxy handler - intercepts protected routes, proxies everything else
- * Note: This middleware runs for all routes, but route handlers below can still
- * take precedence by being registered after this middleware
- */
-app.use("*", async (c, next) => {
-	const path = c.req.path;
-	const protectedPatterns = c.env.PROTECTED_PATTERNS || [];
-
-	// Special handling for built-in endpoints
-	// These are handled by route handlers below, not proxied
-	if (BUILT_IN_PUBLIC_PATHS.includes(path)) {
-		return next(); // Let the route handler below handle it
+export function validateCompanyAngleRequest(input: unknown): ValidationResult {
+	if (!input || typeof input !== "object" || Array.isArray(input)) {
+		return {
+			error:
+				"Request body must be an object with company_name, domain, context, or notes.",
+		};
 	}
 
-	// Check if this path is protected (including /__x402/protected)
-	const protectedConfig = findProtectedRouteConfig(path, protectedPatterns);
-	if (protectedConfig) {
-		// Bot Management Filtering: check if request has exception (human or excepted bot)
-		if (hasBotManagementException(c.req.raw, protectedConfig)) {
-			if (path === "/__x402/protected") {
-				return next();
-			}
-			return proxyToOrigin(c.req.raw, c.env);
+	const data = input as Record<string, unknown>;
+	const value: CompanyAngleRequest = {};
+
+	if (data.company_name !== undefined) {
+		if (typeof data.company_name !== "string") {
+			return { error: "company_name must be a string." };
+		}
+		const companyName = data.company_name.trim();
+		if (companyName.length === 0 || companyName.length > 120) {
+			return { error: "company_name must be between 1 and 120 characters." };
+		}
+		value.company_name = companyName;
+	}
+
+	if (data.domain !== undefined) {
+		if (typeof data.domain !== "string") {
+			return { error: "domain must be a string." };
+		}
+		const domain = data.domain.trim().toLowerCase();
+		if (
+			domain.length === 0 ||
+			domain.length > 253 ||
+			!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)
+		) {
+			return { error: "domain must be a valid hostname like example.com." };
+		}
+		value.domain = domain;
+	}
+
+	if (data.context !== undefined) {
+		if (!Array.isArray(data.context)) {
+			return { error: "context must be an array of strings." };
+		}
+		if (data.context.length > 20) {
+			return { error: "context can include up to 20 items." };
 		}
 
-		// Ensure JWT_SECRET is configured before processing protected routes
-		if (!c.env.JWT_SECRET) {
-			return c.json(
+		const contextItems: string[] = [];
+		for (const entry of data.context) {
+			if (typeof entry !== "string") {
+				return { error: "Each context entry must be a string." };
+			}
+			const trimmed = entry.trim();
+			if (trimmed.length === 0 || trimmed.length > 300) {
+				return {
+					error: "Each context entry must be between 1 and 300 characters.",
+				};
+			}
+			contextItems.push(trimmed);
+		}
+
+		if (contextItems.length > 0) {
+			value.context = contextItems;
+		}
+	}
+
+	if (data.notes !== undefined) {
+		if (typeof data.notes !== "string") {
+			return { error: "notes must be a string." };
+		}
+		const notes = data.notes.trim();
+		if (notes.length === 0 || notes.length > 2000) {
+			return { error: "notes must be between 1 and 2000 characters." };
+		}
+		value.notes = notes;
+	}
+
+	if (!value.company_name && !value.domain && !value.context && !value.notes) {
+		return {
+			error:
+				"Provide at least one of: company_name, domain, context, or notes.",
+		};
+	}
+
+	return { value };
+}
+
+function buildCompanyAnglePrompt(input: CompanyAngleRequest): string {
+	const contextLines =
+		input.context?.map((line) => `- ${line}`).join("\n") || "- None provided";
+
+	return [
+		"Create the best outreach or action angle for autonomous agent usage.",
+		"Return exactly one actionable sentence and nothing else.",
+		`Company name: ${input.company_name ?? "Unknown"}`,
+		`Domain: ${input.domain ?? "Unknown"}`,
+		"Context:",
+		contextLines,
+		`Notes: ${input.notes ?? "None"}`,
+	].join("\n");
+}
+
+export function enforceSingleSentence(rawText: string): string {
+	const normalized = rawText.replace(/\s+/g, " ").trim();
+	if (!normalized) {
+		return "No clear action angle is available from the provided input.";
+	}
+
+	const firstSentence = normalized.split(/(?<=[.!?])\s+/)[0] ?? normalized;
+	const cleaned = firstSentence.replace(/^[-*\s]+/, "").trim();
+
+	if (!cleaned) {
+		return "No clear action angle is available from the provided input.";
+	}
+
+	if (/[.!?]$/.test(cleaned)) {
+		return cleaned;
+	}
+
+	return `${cleaned}.`;
+}
+
+async function requestCompanyAngleFromXai(
+	env: Env,
+	input: CompanyAngleRequest
+): Promise<string> {
+	if (!env.XAI_API_KEY) {
+		throw new Error("Server misconfigured: XAI_API_KEY is not set.");
+	}
+
+	const response = await fetch("https://api.x.ai/v1/chat/completions", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${env.XAI_API_KEY}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({
+			model: env.XAI_MODEL || "grok-3-mini",
+			temperature: 0.2,
+			max_tokens: 120,
+			messages: [
 				{
-					error:
-						"Server misconfigured: JWT_SECRET not set. See README for setup instructions.",
+					role: "system",
+					content:
+						"You are an API that outputs one actionable sentence for sales or strategic outreach based on company context.",
 				},
-				500
-			);
-		}
+				{
+					role: "user",
+					content: buildCompanyAnglePrompt(input),
+				},
+			],
+		}),
+	});
 
-		// Use the protected route middleware
-		const protectedMiddleware = createProtectedRoute(protectedConfig);
-		let jwtToken = "";
-
-		const result = await protectedMiddleware(c, async () => {
-			// After successful auth, check if we need to issue a cookie
-			const hasExistingAuth = c.get("auth");
-
-			if (!hasExistingAuth) {
-				// This is a new payment - generate JWT cookie
-				// Note: This runs after payment verification but BEFORE settlement.
-				// We'll check if settlement succeeded before actually using the token.
-				jwtToken = await generateJWT(c.env.JWT_SECRET, 3600);
-			}
-
-			// Do nothing here - we'll proxy after middleware returns
-		});
-
-		// If middleware returned a response (e.g., 402), return it
-		if (result) {
-			return result;
-		}
-
-		// Check if the payment middleware set an error response (e.g., settlement failed)
-		// The x402-hono middleware sets c.res to a 402 if settlement fails, even though
-		// it doesn't return a Response object. We must check c.res status and discard
-		// the JWT token if payment didn't fully complete.
-		if (c.res && c.res.status >= 400) {
-			// Payment verification succeeded but settlement failed - don't grant access
-			return c.res;
-		}
-
-		if (path === "/__x402/protected") {
-			// If we generated a JWT token, set the cookie BEFORE calling next()
-			// so it's included in the response that Hono builds
-			if (jwtToken) {
-				setCookie(c, "auth_token", jwtToken, {
-					httpOnly: true,
-					secure: true,
-					sameSite: "Strict",
-					maxAge: 3600,
-					path: "/",
-				});
-			}
-
-			await next();
-			return c.res;
-		}
-
-		// Proxy the authenticated request to origin
-		const originResponse = await proxyToOrigin(c.req.raw, c.env);
-
-		// If we generated a JWT token, add it as a cookie to the response
-		if (jwtToken) {
-			// Use Hono's setCookie to generate the proper Set-Cookie header
-			setCookie(c, "auth_token", jwtToken, {
-				httpOnly: true,
-				secure: true,
-				sameSite: "Strict",
-				maxAge: 3600,
-				path: "/",
-			});
-
-			// Clone the origin response and add our cookie header
-			const newResponse = new Response(originResponse.body, {
-				status: originResponse.status,
-				statusText: originResponse.statusText,
-				headers: new Headers(originResponse.headers),
-			});
-
-			// Copy Set-Cookie headers from Hono context to our response
-			// Use getSetCookie() to properly handle multiple Set-Cookie headers
-			const setCookieHeaders = c.res.headers.getSetCookie();
-			for (const cookie of setCookieHeaders) {
-				newResponse.headers.append("Set-Cookie", cookie);
-			}
-
-			return newResponse;
-		}
-
-		// Otherwise, return origin response as-is
-		return originResponse;
+	if (!response.ok) {
+		const errorText = await response.text();
+		throw new Error(
+			`XAI request failed with status ${response.status}: ${errorText.slice(0, 200)}`
+		);
 	}
 
-	// Proxy unprotected routes directly to origin
-	return proxyToOrigin(c.req.raw, c.env);
-});
+	const data = (await response.json()) as {
+		choices?: Array<{ message?: { content?: string } }>;
+	};
+	const rawText = data.choices?.[0]?.message?.content;
 
-/**
- * Built-in test endpoint - always public, never requires payment
- * Used for health checks and testing proxy functionality
- */
+	if (!rawText || typeof rawText !== "string") {
+		throw new Error("XAI returned an invalid response payload.");
+	}
+
+	return enforceSingleSentence(rawText);
+}
+
 app.get("/__x402/health", (c) => {
 	return c.json({
 		status: "ok",
-		proxy: "x402-proxy",
-		message: "This endpoint is always public",
+		product: "company-angle-api",
+		endpoint: COMPANY_ANGLE_PATH,
 		timestamp: Date.now(),
 	});
 });
 
-/**
- * Config status endpoint - shows current configuration (no secrets exposed)
- * Useful for debugging and verifying deployment
- */
 app.get("/__x402/config", (c) => {
 	const patterns = (c.env.PROTECTED_PATTERNS || []) as ProtectedRouteConfig[];
-	const botFilteringEnabled = patterns.some(
-		(p) => p.bot_score_threshold !== undefined
-	);
+	const companyAngleProtection = getCompanyAngleProtection(patterns);
 
 	return c.json({
 		network: c.env.NETWORK,
 		payTo: c.env.PAY_TO ? `***${c.env.PAY_TO.slice(-6)}` : null,
-		hasOriginUrl: !!c.env.ORIGIN_URL,
-		hasOriginService: !!c.env.ORIGIN_SERVICE,
-		protectedPatterns: patterns.map((p) => ({
-			pattern: p.pattern,
-			botManagementFiltering:
-				p.bot_score_threshold !== undefined
-					? {
-							threshold: p.bot_score_threshold,
-							exceptionsCount: p.except_detection_ids?.length ?? 0,
-						}
-					: null,
-		})),
-		botManagementFiltering: botFilteringEnabled,
+		xaiConfigured: Boolean(c.env.XAI_API_KEY),
+		companyAngleProtection: {
+			pattern: companyAngleProtection.pattern,
+			price: companyAngleProtection.price,
+			description: companyAngleProtection.description,
+		},
+		protectedPatterns: patterns,
 	});
 });
 
-/**
- * Built-in test endpoint - always protected, always requires payment
- * Used for testing payment flow without needing to configure protected patterns
- * This endpoint serves content directly (not proxied to origin)
- */
-app.get("/__x402/protected", (c) => {
-	return c.json({
-		message: "Premium content accessed!",
-		timestamp: Date.now(),
-		note: "This endpoint always requires payment or valid authentication cookie",
-	});
+app.post(
+	COMPANY_ANGLE_PATH,
+	async (c, next) => {
+		const patterns = (c.env.PROTECTED_PATTERNS || []) as ProtectedRouteConfig[];
+		const routeConfig = getCompanyAngleProtection(patterns);
+		return createProtectedRoute(routeConfig)(c, next);
+	},
+	async (c) => {
+		let payload: unknown;
+		try {
+			payload = await c.req.json();
+		} catch {
+			return c.json(
+				{ error: "invalid_json", message: "Request body must be valid JSON." },
+				400
+			);
+		}
+
+		const validation = validateCompanyAngleRequest(payload);
+		if (validation.error || !validation.value) {
+			return c.json(
+				{ error: "invalid_request", message: validation.error },
+				400
+			);
+		}
+
+		try {
+			const summary = await requestCompanyAngleFromXai(c.env, validation.value);
+			return c.json({ summary });
+		} catch (error) {
+			const message =
+				error instanceof Error
+					? error.message
+					: "Failed to generate company angle.";
+			const status = message.includes("XAI_API_KEY") ? 500 : 502;
+
+			return c.json({ error: "upstream_error", message }, status);
+		}
+	}
+);
+
+app.notFound((c) => {
+	return c.json(
+		{
+			error: "not_found",
+			message: "Route not found.",
+			available_routes: [
+				"GET /__x402/health",
+				"GET /__x402/config",
+				"POST /v1/company-angle",
+			],
+		},
+		404
+	);
 });
 
 export default app;

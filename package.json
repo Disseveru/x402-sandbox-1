@@ -1,8 +1,8 @@
 {
-	"name": "x402-sandbox-1",
-	"description": "Transparent proxy with payment-gated routes using x402 protocol and stateless JWT authentication",
+	"name": "cloudflare-setup-x402",
+	"description": "Paid Cloudflare Worker API that returns one actionable company angle sentence for autonomous agents",
 	"cloudflare": {
-		"label": "x402 Payment-Gated Proxy",
+		"label": "Paid Company Angle API",
 		"products": [
 			"Workers"
 		],
@@ -14,8 +14,8 @@
 		"preview_icon_url": "https://imagedelivery.net/wSMYJvS3Xw-n339CbDyDIA/9b1345c4-7bfe-4be2-89fd-80cd59985e00/public",
 		"healthCheckPath": "/__x402/health",
 		"bindings": {
-			"JWT_SECRET": {
-				"description": "Secret key for signing JWT authentication tokens. Generate with `node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"`"
+			"XAI_API_KEY": {
+				"description": "Secret API key for XAI chat/completions requests."
 			}
 		}
 	},
@@ -45,7 +45,8 @@
 		"lint": "npm run typecheck && npm run format:check && eslint .",
 		"lint:fix": "prettier --write . && eslint . --fix",
 		"test:client": "tsx test-client.ts",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "tsx --test tests/*.test.ts"
 	},
 	"type": "module"
 }

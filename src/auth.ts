@@ -87,7 +87,9 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 		// Create payment middleware dynamically with config from env
 		// Facilitator is optional - x402 uses its own default when not provided
 		const facilitator = c.env.FACILITATOR_URL
-			? { url: c.env.FACILITATOR_URL }
+			? {
+					url: c.env.FACILITATOR_URL as `${string}://${string}`,
+				}
 			: undefined;
 
 		const paymentMw = paymentMiddleware(
