@@ -5,6 +5,15 @@ import type { AppContext, Env } from "./env";
 const app = new Hono<AppContext>();
 
 const COMPANY_ANGLE_PATH = "/v1/company-angle";
+const MAX_XAI_ERROR_PREVIEW = 200;
+const DEFAULT_XAI_MODEL = "grok-3-mini";
+const MAX_COMPANY_NAME_LENGTH = 120;
+const MAX_DOMAIN_LENGTH = 253;
+const MAX_CONTEXT_ITEMS = 20;
+const MAX_CONTEXT_ITEM_LENGTH = 300;
+const MAX_NOTES_LENGTH = 2000;
+// Simple hostname validator: requires at least one dot and valid hostname characters.
+const HOSTNAME_PATTERN = /^[a-z0-9.-]+\.[a-z]{2,}$/i;
 
 const DEFAULT_COMPANY_ANGLE_PROTECTION: ProtectedRouteConfig = {
 	pattern: COMPANY_ANGLE_PATH,
@@ -22,6 +31,16 @@ interface CompanyAngleRequest {
 interface ValidationResult {
 	value?: CompanyAngleRequest;
 	error?: string;
+}
+
+class CompanyAngleError extends Error {
+	constructor(
+		readonly code: "MISCONFIGURED" | "UPSTREAM",
+		message: string
+	) {
+		super(message);
+		this.name = "CompanyAngleError";
+	}
 }
 
 function normalizeRoutePath(path: string): string {
@@ -69,7 +88,10 @@ export function validateCompanyAngleRequest(input: unknown): ValidationResult {
 			return { error: "company_name must be a string." };
 		}
 		const companyName = data.company_name.trim();
-		if (companyName.length === 0 || companyName.length > 120) {
+		if (
+			companyName.length === 0 ||
+			companyName.length > MAX_COMPANY_NAME_LENGTH
+		) {
 			return { error: "company_name must be between 1 and 120 characters." };
 		}
 		value.company_name = companyName;
@@ -82,8 +104,8 @@ export function validateCompanyAngleRequest(input: unknown): ValidationResult {
 		const domain = data.domain.trim().toLowerCase();
 		if (
 			domain.length === 0 ||
-			domain.length > 253 ||
-			!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)
+			domain.length > MAX_DOMAIN_LENGTH ||
+			!HOSTNAME_PATTERN.test(domain)
 		) {
 			return { error: "domain must be a valid hostname like example.com." };
 		}
@@ -94,7 +116,7 @@ export function validateCompanyAngleRequest(input: unknown): ValidationResult {
 		if (!Array.isArray(data.context)) {
 			return { error: "context must be an array of strings." };
 		}
-		if (data.context.length > 20) {
+		if (data.context.length > MAX_CONTEXT_ITEMS) {
 			return { error: "context can include up to 20 items." };
 		}
 
@@ -104,7 +126,7 @@ export function validateCompanyAngleRequest(input: unknown): ValidationResult {
 				return { error: "Each context entry must be a string." };
 			}
 			const trimmed = entry.trim();
-			if (trimmed.length === 0 || trimmed.length > 300) {
+			if (trimmed.length === 0 || trimmed.length > MAX_CONTEXT_ITEM_LENGTH) {
 				return {
 					error: "Each context entry must be between 1 and 300 characters.",
 				};
@@ -122,7 +144,7 @@ export function validateCompanyAngleRequest(input: unknown): ValidationResult {
 			return { error: "notes must be a string." };
 		}
 		const notes = data.notes.trim();
-		if (notes.length === 0 || notes.length > 2000) {
+		if (notes.length === 0 || notes.length > MAX_NOTES_LENGTH) {
 			return { error: "notes must be between 1 and 2000 characters." };
 		}
 		value.notes = notes;
@@ -159,7 +181,7 @@ export function enforceSingleSentence(rawText: string): string {
 		return "No clear action angle is available from the provided input.";
 	}
 
-	const firstSentence = normalized.split(/(?<=[.!?])\s+/)[0] ?? normalized;
+	const firstSentence = normalized.split(/(?<=[.!?])\s+/)[0] || normalized;
 	const cleaned = firstSentence.replace(/^[-*\s]+/, "").trim();
 
 	if (!cleaned) {
@@ -173,12 +195,15 @@ export function enforceSingleSentence(rawText: string): string {
 	return `${cleaned}.`;
 }
 
-async function requestCompanyAngleFromXai(
+export async function requestCompanyAngleFromXai(
 	env: Env,
 	input: CompanyAngleRequest
 ): Promise<string> {
 	if (!env.XAI_API_KEY) {
-		throw new Error("Server misconfigured: XAI_API_KEY is not set.");
+		throw new CompanyAngleError(
+			"MISCONFIGURED",
+			"XAI API key is not configured."
+		);
 	}
 
 	const response = await fetch("https://api.x.ai/v1/chat/completions", {
@@ -188,7 +213,7 @@ async function requestCompanyAngleFromXai(
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify({
-			model: env.XAI_MODEL || "grok-3-mini",
+			model: env.XAI_MODEL || DEFAULT_XAI_MODEL,
 			temperature: 0.2,
 			max_tokens: 120,
 			messages: [
@@ -207,8 +232,11 @@ async function requestCompanyAngleFromXai(
 
 	if (!response.ok) {
 		const errorText = await response.text();
-		throw new Error(
-			`XAI request failed with status ${response.status}: ${errorText.slice(0, 200)}`
+		const errorPreview = errorText.slice(0, MAX_XAI_ERROR_PREVIEW);
+		console.error("xai upstream error", response.status, errorPreview);
+		throw new CompanyAngleError(
+			"UPSTREAM",
+			`XAI request failed with status ${response.status}`
 		);
 	}
 
@@ -218,7 +246,10 @@ async function requestCompanyAngleFromXai(
 	const rawText = data.choices?.[0]?.message?.content;
 
 	if (!rawText || typeof rawText !== "string") {
-		throw new Error("XAI returned an invalid response payload.");
+		throw new CompanyAngleError(
+			"UPSTREAM",
+			"XAI returned an invalid response payload."
+		);
 	}
 
 	return enforceSingleSentence(rawText);
@@ -280,13 +311,19 @@ app.post(
 			const summary = await requestCompanyAngleFromXai(c.env, validation.value);
 			return c.json({ summary });
 		} catch (error) {
-			const message =
-				error instanceof Error
-					? error.message
-					: "Failed to generate company angle.";
-			const status = message.includes("XAI_API_KEY") ? 500 : 502;
+			console.error("company-angle generation failed", error);
+			const isMisconfigured =
+				error instanceof CompanyAngleError && error.code === "MISCONFIGURED";
 
-			return c.json({ error: "upstream_error", message }, status);
+			return c.json(
+				{
+					error: "upstream_error",
+					message: isMisconfigured
+						? "Service temporarily unavailable."
+						: "Failed to generate company angle.",
+				},
+				isMisconfigured ? 500 : 502
+			);
 		}
 	}
 );

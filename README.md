@@ -110,7 +110,7 @@ Status: `402 Payment Required`
 `wrangler.jsonc` includes:
 
 - `PAY_TO` - wallet address receiving payment
-- `NETWORK` - chain/network (for example `base` or `base-sepolia`)
+- `NETWORK` - chain/network (for example `base-sepolia` or `base`)
 - `PROTECTED_PATTERNS` - route pricing and descriptions (includes `/v1/company-angle`)
 - `FACILITATOR_URL` - x402 facilitator URL
 - `XAI_MODEL` - optional XAI model override (`grok-3-mini` default in code)

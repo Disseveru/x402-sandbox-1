@@ -6,12 +6,11 @@
 	"observability": {
 		"enabled": true,
 	},
-	"assets": {
-		"directory": "public",
-	},
 	"vars": {
 		"PAY_TO": "0x000000000000000000000000000000000000dEaD",
-		"NETWORK": "base",
+		// Use base-sepolia by default for testnet setup.
+		// Switch to "base" with a real PAY_TO wallet before production launch.
+		"NETWORK": "base-sepolia",
 		"PROTECTED_PATTERNS": [
 			{
 				"pattern": "/v1/company-angle",

@@ -7,7 +7,7 @@ import type { JWTPayload } from "./jwt";
 export interface Env extends CloudflareBindings {
 	/** Secret API key for XAI chat/completions */
 	XAI_API_KEY: string;
-	/** Optional JWT secret for cookie-based auth support in shared x402 middleware */
+	/** Optional JWT secret used only when clients send auth_token cookies to shared payment middleware */
 	JWT_SECRET?: string;
 }
 
