@@ -1,0 +1,60 @@
+name: Deploy x402 Worker
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint & Type-check
+        run: |
+          npm run lint --if-present
+          npm run typecheck --if-present
+
+      - name: Test
+        run: npm test --if-present
+
+      - name: Deploy Worker (production)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --name x402-sandbox-1
+          secrets: |
+            JWT_SECRET
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Deploy Worker (preview / PR)
+        if: github.event_name == 'pull_request'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --name x402-sandbox-1-preview
+          secrets: |
+            JWT_SECRET
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          
