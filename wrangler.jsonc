@@ -1,2 +1,181 @@
-// wrangler.jsonc
-"name": "cloudflare-setup-x402",
+/**
+ * x402 Payment-Gated SaaS Worker - Wrangler Configuration
+ *
+ * Multi-service monetized API platform for autonomous agents
+ * Compliant with CDP Quickstart for Sellers and Cloudflare Workers best practices
+ *
+ * For more details on configuration:
+ * - Wrangler: https://developers.cloudflare.com/workers/wrangler/configuration/
+ * - CDP x402: https://docs.cdp.coinbase.com/cdp-apis/docs/x402
+ * - x402 Protocol: https://x402.org
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "x402-saas-platform",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-10-08",
+	"observability": {
+		"enabled": true,
+	},
+	// =========================================================================
+	// STATIC ASSETS - Homepage and public resources
+	// =========================================================================
+	// Comment out when using ORIGIN_URL to avoid serving static landing page
+	// instead of proxying to origin
+	//
+	// "assets": {
+	// 	"directory": "public"
+	// },
+	// =========================================================================
+	// ROUTES - Deploy on your custom domain
+	// =========================================================================
+	// Uncomment and configure routes to deploy on your domain.
+	// The worker will intercept all requests matching these patterns.
+	//
+	// "routes": [
+	// 	{
+	// 		"pattern": "api.yourdomain.com/*",
+	// 		"zone_name": "yourdomain.com"
+	// 	}
+	// ],
+	// =========================================================================
+	// SERVICE BINDING - For Worker-to-Worker communication
+	// =========================================================================
+	// Use this if your origin is another Cloudflare Worker in your account.
+	// Service Bindings are faster (no network hop) than URL-based proxying.
+	//
+	// "services": [
+	// 	{
+	// 		"binding": "ORIGIN_SERVICE",
+	// 		"service": "my-backend-worker"
+	// 	}
+	// ],
+	"vars": {
+		// =====================================================================
+		// PAYMENT CONFIGURATION (REQUIRED for x402 protocol)
+		// =====================================================================
+		// CDP-compliant payment configuration for Base mainnet
+		// See: https://docs.cdp.coinbase.com/cdp-apis/docs/x402-quickstart-sellers
+		//
+		"PAY_TO": "0xed7d30e8bc643503f9da261ed8e623bb6ecf6189",
+		"NETWORK": "base",
+		// =====================================================================
+		// ORIGIN CONFIGURATION (OPTIONAL - for proxy mode)
+		// =====================================================================
+		// If you want to proxy requests to an external origin after authentication,
+		// set ORIGIN_URL. Otherwise, the Worker serves endpoints directly.
+		//
+		// "ORIGIN_URL": "https://api.x.ai",
+		// =====================================================================
+		// PROTECTED PATTERNS - Multi-Service SaaS Configuration
+		// =====================================================================
+		// Each service endpoint is protected by x402 payment gating.
+		// Prices follow CDP best practices for micropayments on Base mainnet.
+		//
+		// After payment, users receive a JWT cookie valid for 1 hour,
+		// allowing access to all paid services without additional payments.
+		//
+		"PROTECTED_PATTERNS": [
+			// ─────────────────────────────────────────────────────────────────
+			// AI-POWERED SIMULATION SANDBOX
+			// Shadow State Sandbox - verify transactions before execution
+			// ─────────────────────────────────────────────────────────────────
+			{
+				"pattern": "/api/simulate",
+				"price": "$0.02",
+				"description": "AI-powered simulation environment - verify code, transactions, and payloads before execution using Grok AI analysis",
+			},
+			// ─────────────────────────────────────────────────────────────────
+			// SALES & RESEARCH INTELLIGENCE
+			// Company research and outreach angle generation
+			// ─────────────────────────────────────────────────────────────────
+			{
+				"pattern": "/v1/company-angle",
+				"price": "$0.03",
+				"description": "AI-powered company research - one-sentence outreach angle for sales, partnerships, and prospecting using XAI analysis",
+			},
+			// ─────────────────────────────────────────────────────────────────
+			// DATA ENRICHMENT SERVICES
+			// Lead enrichment and website analysis
+			// ─────────────────────────────────────────────────────────────────
+			{
+				"pattern": "/api/enrich",
+				"price": "$0.01",
+				"description": "Lead enrichment - extract structured business signals from any website (title, description, contact links, social profiles, category classification)",
+			},
+			{
+				"pattern": "/api/extract",
+				"price": "$0.01",
+				"description": "Content extraction - LLM-friendly structured content from any webpage (headings, key paragraphs, CTAs, FAQs)",
+			},
+			// ─────────────────────────────────────────────────────────────────
+			// COMPLIANCE & TRUST SIGNALS
+			// Heuristic compliance and trust analysis
+			// ─────────────────────────────────────────────────────────────────
+			{
+				"pattern": "/api/compliance",
+				"price": "$0.02",
+				"description": "Compliance checker - detect privacy policy, terms, refund policy, contact info, and trust signals (informational only, not legal advice)",
+			},
+			// ─────────────────────────────────────────────────────────────────
+			// PREMIUM CONTENT ACCESS
+			// General protected routes for custom content
+			// ─────────────────────────────────────────────────────────────────
+			{
+				"pattern": "/premium/*",
+				"price": "$0.01",
+				"description": "Premium content access for 1 hour",
+			},
+			// ─────────────────────────────────────────────────────────────────
+			// BOT MANAGEMENT FILTERING (OPTIONAL)
+			// Requires Bot Management for Enterprise
+			// ─────────────────────────────────────────────────────────────────
+			// Uncomment to enable "default closed" mode:
+			// - Humans pass through free
+			// - Bots must pay based on bot score
+			// - Specific bots can be excepted (search engines, AI assistants)
+			//
+			// {
+			// 	"pattern": "/content/*",
+			// 	"price": "$0.25",
+			// 	"description": "Premium content - humans free, bots must pay",
+			// 	"bot_score_threshold": 30,
+			// 	"except_detection_ids": [
+			// 		120623194,  // Googlebot
+			// 		117479730,  // BingBot
+			// 		132995013,  // ChatGPT-User
+			// 		33564303    // Claude-User (heuristics ID)
+			// 	]
+			// }
+		],
+		// =====================================================================
+		// FACILITATOR CONFIGURATION (CDP-compliant)
+		// =====================================================================
+		// CDP facilitator for Base mainnet payment settlement
+		// See: https://docs.cdp.coinbase.com/cdp-apis/docs/x402-facilitator
+		//
+		"FACILITATOR_URL": "https://x402.org/facilitator",
+	},
+	// =========================================================================
+	// SECRETS CONFIGURATION
+	// =========================================================================
+	// Set secrets via Wrangler CLI - never commit secrets to the repository
+	//
+	// Required secrets:
+	//   wrangler secret put JWT_SECRET
+	//     - Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+	//     - Purpose: Sign JWT authentication cookies
+	//
+	// Optional secrets (for specific services):
+	//   wrangler secret put XAI_API_KEY
+	//     - Purpose: Enable XAI-powered endpoints (/api/simulate, /v1/company-angle)
+	//     - Get key: https://x.ai
+	//
+	//   wrangler secret put CDP_API_KEY
+	//     - Purpose: Enable CDP Bazaar registration for service discovery
+	//     - Get key: https://portal.cdp.coinbase.com
+	//
+	// See: https://developers.cloudflare.com/workers/configuration/secrets/
+	// =========================================================================
+	"upload_source_maps": true,
+}
