@@ -45,7 +45,7 @@ interface X402Response {
 async function main() {
 	console.log("🧪 Testing x402 Payment Flow\n");
 	console.log(`Server: ${SERVER_URL}`);
-	console.log(`Network: Base Sepolia (testnet)\n`);
+	console.log(`Network: Base mainnet\n`);
 
 	// Step 1: Request without payment (should get 402)
 	console.log("📝 Step 1: Requesting /premium without payment...");

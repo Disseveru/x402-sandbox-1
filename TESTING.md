@@ -6,14 +6,13 @@ This guide explains how to test the x402 payment flow with cookie-based authenti
 
 Before testing, you need:
 
-1. **Base Sepolia testnet USDC**
-   - Get testnet ETH from a Base Sepolia faucet
-   - Get testnet USDC from Coinbase faucet or similar
+1. **Base mainnet USDC**
+   - Ensure you have ETH on Base for gas fees
+   - Ensure you have USDC on Base mainnet
 
-2. **A test wallet with a private key**
-   - Create a test wallet (DO NOT use a wallet with real funds)
+2. **A wallet with a private key**
+   - Use a wallet funded with Base mainnet USDC
    - Export the private key
-   - Fund it with Base Sepolia testnet USDC
 
 3. **The worker running locally**
    ```bash
@@ -46,7 +45,7 @@ The test client will:
 🧪 Testing x402 Payment Flow
 
 Server: http://localhost:8787
-Network: Base Sepolia (testnet)
+Network: Base mainnet
 
 📝 Step 1: Requesting /premium without payment...
 ✅ Received 402 Payment Required
@@ -143,8 +142,8 @@ You should receive the authenticated response without being asked for payment!
 
 ### "Invalid payment" error
 
-- Check that your wallet has enough testnet USDC
-- Verify you're on Base Sepolia network
+- Check that your wallet has enough USDC on Base mainnet
+- Verify you're on Base mainnet
 - Ensure the payment amount matches the requirement
 
 ### "Payment expired" error
@@ -172,8 +171,8 @@ The test client uses these environment variables:
 
 ## Security Notes
 
-⚠️ **NEVER use a private key from a wallet with real funds for testing!**
+⚠️ **Use a dedicated wallet with only the USDC needed for testing!**
 
-- Create a new test wallet specifically for Base Sepolia testnet
-- Only fund it with testnet tokens (no real value)
+- Use a separate wallet specifically for Base mainnet testing
+- Only fund it with the minimum USDC required for test payments
 - The `.dev.vars` file is gitignored - don't commit secrets!

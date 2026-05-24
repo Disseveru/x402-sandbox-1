@@ -6,9 +6,9 @@ declare namespace Cloudflare {
 		mainModule: typeof import("./src/index");
 	}
 	interface Env {
-		PAY_TO: "0x000000000000000000000000000000000000dEaD";
-		NETWORK: "base-sepolia";
-		PROTECTED_PATTERNS: [{"pattern":"/premium/*","price":"$0.01","description":"Access to premium content for 1 hour"}];
+		PAY_TO: "0xed7d30e8bc643503f9da261ed8e623bb6ecf6189";
+		NETWORK: "base";
+		PROTECTED_PATTERNS: [{"pattern":"/premium/*","price":"$0.01","description":"Access to premium content for 1 hour"},{"pattern":"/xai/*","price":"$0.01","description":"Access to xAI services"}];
 		FACILITATOR_URL: "https://x402.org/facilitator";
 	}
 }

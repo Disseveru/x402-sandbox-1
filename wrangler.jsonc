@@ -1,2 +1,24 @@
 // wrangler.jsonc
-"name": "cloudflare-setup-x402",
+{
+	"name": "cloudflare-setup-x402",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-10-08",
+	"vars": {
+		"PAY_TO": "0xed7d30e8bc643503f9da261ed8e623bb6ecf6189",
+		"NETWORK": "base",
+		"ORIGIN_URL": "https://api.x.ai",
+		"PROTECTED_PATTERNS": [
+			{
+				"pattern": "/premium/*",
+				"price": "$0.01",
+				"description": "Access to premium content for 1 hour",
+			},
+			{
+				"pattern": "/xai/*",
+				"price": "$0.01",
+				"description": "Access to xAI services",
+			},
+		],
+		"FACILITATOR_URL": "https://x402.org/facilitator",
+	},
+}
