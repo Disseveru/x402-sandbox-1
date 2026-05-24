@@ -7,7 +7,7 @@
 
 import type { JWTPayload } from "./jwt";
 
-export interface Env extends CloudflareBindings {
+export interface Env extends Omit<CloudflareBindings, "ORIGIN_URL"> {
 	/** Secret for signing JWT tokens - set via .dev.vars locally or `wrangler secret put` in production */
 	JWT_SECRET: string;
 	/**

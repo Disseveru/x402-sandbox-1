@@ -17,3 +17,6 @@ worker-configuration.d.ts
 
 # Lock files
 package-lock.json
+
+# Mixed YAML/Markdown files that Prettier can't parse
+.claude/homunculus/instincts/inherited/*.yaml
