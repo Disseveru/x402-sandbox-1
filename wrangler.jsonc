@@ -11,7 +11,7 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "x402-saas-platform",
+	"name": "cloudflare-setup-x402",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-10-08",
 	"observability": {
