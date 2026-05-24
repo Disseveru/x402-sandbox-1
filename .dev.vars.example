@@ -1,7 +1,26 @@
 # Secrets for local development (config vars go in wrangler.jsonc)
 # Copy this file to .dev.vars and fill in your values
+# DO NOT commit this file with real secrets!
+
+# ============================================================================
+# REQUIRED SECRETS
+# ============================================================================
 
 # JWT secret for signing authentication tokens
 # Generate a secure random secret with:
 # node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 JWT_SECRET=your-secret-key-here
+
+# ============================================================================
+# OPTIONAL SECRETS (for specific services)
+# ============================================================================
+
+# XAI API Key - Required for AI-powered endpoints
+# Used by: /api/simulate, /v1/company-angle
+# Get your key from: https://x.ai
+# XAI_API_KEY=your-xai-api-key-here
+
+# CDP API Key - Required for Bazaar service registration
+# Used by: Service discovery and registration tools
+# Get your key from: https://portal.cdp.coinbase.com
+# CDP_API_KEY=your-cdp-api-key-here

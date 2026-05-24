@@ -1,5 +1,5 @@
 import "./tools";
-import "./workflow";
+// import "./workflow"; // Commented out - requires @agents/workflows and @anthropic-ai/sdk packages
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import { createProtectedRoute, type ProtectedRouteConfig } from "./auth";
