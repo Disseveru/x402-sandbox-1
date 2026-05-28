@@ -72,7 +72,7 @@ export const registerOnBazaarTool = {
               currency: "USDC",
               network: "eip155:8453",
               recipient: env.RECIPIENT_WALLET_ADDRESS,
-              facilitator: "https://x402.org/facilitator"
+              facilitator: "https://api.cdp.coinbase.com/platform/v2/x402"
             }
           }
         })
