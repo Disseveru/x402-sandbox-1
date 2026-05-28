@@ -4,16 +4,17 @@ This repository provides a complete x402 payment-gated SaaS platform with 6 mone
 
 ## 🚀 Available Services
 
-| Endpoint | Price | Description |
-|----------|-------|-------------|
-| `POST /api/simulate` | $0.02 | AI-powered simulation sandbox using Grok AI |
-| `POST /v1/company-angle` | $0.03 | Sales intelligence - one-sentence outreach angles |
-| `POST /api/enrich` | $0.01 | Lead enrichment - extract business signals from websites |
-| `POST /api/extract` | $0.01 | Content extraction - LLM-friendly structured content |
-| `POST /api/compliance` | $0.02 | Compliance checker - detect trust signals and policies |
-| `GET /premium/*` | $0.01 | Premium content access (wildcard route) |
+| Endpoint                 | Price | Description                                              |
+| ------------------------ | ----- | -------------------------------------------------------- |
+| `POST /api/simulate`     | $0.02 | AI-powered simulation sandbox using Grok AI              |
+| `POST /v1/company-angle` | $0.03 | Sales intelligence - one-sentence outreach angles        |
+| `POST /api/enrich`       | $0.01 | Lead enrichment - extract business signals from websites |
+| `POST /api/extract`      | $0.01 | Content extraction - LLM-friendly structured content     |
+| `POST /api/compliance`   | $0.02 | Compliance checker - detect trust signals and policies   |
+| `GET /premium/*`         | $0.01 | Premium content access (wildcard route)                  |
 
 ### Built-in Endpoints (Always Free)
+
 - `GET /__x402/health` - Health check
 - `GET /__x402/config` - Configuration status
 - `GET /__x402/protected` - Test payment flow ($0.01)
@@ -87,11 +88,11 @@ The configuration in `wrangler.jsonc` follows [CDP Quickstart for Sellers](https
 
 ```jsonc
 {
-  "vars": {
-    "PAY_TO": "0xed7d30e8bc643503f9da261ed8e623bb6ecf6189",
-    "NETWORK": "base",
-    "FACILITATOR_URL": "https://x402.org/facilitator"
-  }
+	"vars": {
+		"PAY_TO": "0xed7d30e8bc643503f9da261ed8e623bb6ecf6189",
+		"NETWORK": "base",
+		"FACILITATOR_URL": "https://x402.org/facilitator",
+	},
 }
 ```
 
@@ -106,12 +107,12 @@ To deploy on your custom domain, uncomment and configure `routes` in `wrangler.j
 
 ```jsonc
 {
-  "routes": [
-    {
-      "pattern": "api.yourdomain.com/*",
-      "zone_name": "yourdomain.com"
-    }
-  ]
+	"routes": [
+		{
+			"pattern": "api.yourdomain.com/*",
+			"zone_name": "yourdomain.com",
+		},
+	],
 }
 ```
 
@@ -135,16 +136,16 @@ Example:
 
 ```jsonc
 {
-  "pattern": "/content/*",
-  "price": "$0.25",
-  "description": "Premium content - humans free, bots must pay",
-  "bot_score_threshold": 30,
-  "except_detection_ids": [
-    120623194,  // Googlebot
-    117479730,  // BingBot
-    132995013,  // ChatGPT-User
-    33564303    // Claude-User
-  ]
+	"pattern": "/content/*",
+	"price": "$0.25",
+	"description": "Premium content - humans free, bots must pay",
+	"bot_score_threshold": 30,
+	"except_detection_ids": [
+		120623194, // Googlebot
+		117479730, // BingBot
+		132995013, // ChatGPT-User
+		33564303, // Claude-User
+	],
 }
 ```
 
@@ -184,6 +185,7 @@ npm run test:client
 ```
 
 This will:
+
 1. Request a protected endpoint
 2. Receive 402 Payment Required
 3. Make a payment on Base mainnet
@@ -209,9 +211,9 @@ Observability is enabled in `wrangler.jsonc`:
 
 ```jsonc
 {
-  "observability": {
-    "enabled": true
-  }
+	"observability": {
+		"enabled": true,
+	},
 }
 ```
 

@@ -40,9 +40,15 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --name x402-sandbox-1
-          secrets: |
-            JWT_SECRET
+          command: deploy
+
+      - name: Upload JWT_SECRET (production)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: secret put JWT_SECRET
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
@@ -52,9 +58,14 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --name x402-sandbox-1-preview
-          secrets: |
-            JWT_SECRET
+          command: deploy
+
+      - name: Upload JWT_SECRET (preview / PR)
+        if: github.event_name == 'pull_request'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: secret put JWT_SECRET
         env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'preview-secret-not-configured-for-testing-only-do-not-use-in-production' }}

@@ -14,14 +14,15 @@
 	"name": "cloudflare-setup-x402",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-10-08",
+	"account_id": "08aac2eadaaa0d5cfd8b771ae4c8e46c",
 	"observability": {
 		"logs": {
 			"enabled": true,
-			"invocation_logs": true
+			"invocation_logs": true,
 		},
 		"traces": {
-			"enabled": false
-		}
+			"enabled": false,
+		},
 	},
 	// =========================================================================
 	// STATIC ASSETS - Homepage and public resources
@@ -157,10 +158,10 @@
 		// =====================================================================
 		// FACILITATOR CONFIGURATION (CDP-compliant)
 		// =====================================================================
-		// CDP facilitator for Base mainnet payment settlement
+		// CDP v2 facilitator for Base mainnet payment settlement
 		// See: https://docs.cdp.coinbase.com/cdp-apis/docs/x402-facilitator
 		//
-		"FACILITATOR_URL": "https://x402.org/facilitator",
+		"FACILITATOR_URL": "https://api.cdp.coinbase.com/platform/v2/x402",
 	},
 	// =========================================================================
 	// SECRETS CONFIGURATION

@@ -17,3 +17,6 @@ worker-configuration.d.ts
 
 # Lock files
 package-lock.json
+
+# Claude/Agent config files with mixed YAML/Markdown
+.claude/homunculus/instincts/inherited/x402-sandbox-1-instincts.yaml
