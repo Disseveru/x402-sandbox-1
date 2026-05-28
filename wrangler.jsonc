@@ -18,11 +18,11 @@
 	"observability": {
 		"logs": {
 			"enabled": true,
-			"invocation_logs": true
+			"invocation_logs": true,
 		},
 		"traces": {
-			"enabled": false
-		}
+			"enabled": false,
+		},
 	},
 	// =========================================================================
 	// STATIC ASSETS - Homepage and public resources

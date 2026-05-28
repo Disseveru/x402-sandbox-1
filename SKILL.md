@@ -12,6 +12,7 @@ A comprehensive suite of monetized APIs for autonomous agents using the x402 pay
 ## Available Services
 
 ### 1. AI-Powered Simulation Sandbox (`/api/simulate`)
+
 **Price:** $0.02 USDC per simulation
 **Description:** Verify code, transactions, and payloads before execution using Grok AI analysis
 
@@ -23,6 +24,7 @@ A comprehensive suite of monetized APIs for autonomous agents using the x402 pay
 ---
 
 ### 2. Company Research Intelligence (`/v1/company-angle`)
+
 **Price:** $0.03 USDC per analysis
 **Description:** One-sentence outreach angle for sales, partnerships, and prospecting using XAI
 
@@ -34,6 +36,7 @@ A comprehensive suite of monetized APIs for autonomous agents using the x402 pay
 ---
 
 ### 3. Lead Enrichment (`/api/enrich`)
+
 **Price:** $0.01 USDC per enrichment
 **Description:** Extract structured business signals from any website
 
@@ -45,6 +48,7 @@ A comprehensive suite of monetized APIs for autonomous agents using the x402 pay
 ---
 
 ### 4. Content Extraction (`/api/extract`)
+
 **Price:** $0.01 USDC per extraction
 **Description:** LLM-friendly structured content from any webpage
 
@@ -56,6 +60,7 @@ A comprehensive suite of monetized APIs for autonomous agents using the x402 pay
 ---
 
 ### 5. Compliance Checker (`/api/compliance`)
+
 **Price:** $0.02 USDC per check
 **Description:** Detect privacy policy, terms, refund policy, and trust signals (informational only, not legal advice)
 
@@ -67,6 +72,7 @@ A comprehensive suite of monetized APIs for autonomous agents using the x402 pay
 ---
 
 ### 6. Premium Content Access (`/premium/*`)
+
 **Price:** $0.01 USDC for 1-hour access
 **Description:** General protected routes for custom premium content
 
@@ -84,6 +90,7 @@ A comprehensive suite of monetized APIs for autonomous agents using the x402 pay
 6. **Make unlimited requests** to any service during the 1-hour session
 
 ## Payment Details
+
 - **Network:** Base mainnet (EIP-155 chain ID: 8453)
 - **Currency:** USDC
 - **Payment Address:** `0xed7d30e8bc643503f9da261ed8e623bb6ecf6189`
@@ -91,6 +98,7 @@ A comprehensive suite of monetized APIs for autonomous agents using the x402 pay
 - **Session Duration:** 1 hour after first payment
 
 ## Compliance
+
 - CDP Quickstart for Sellers compliant
 - x402 protocol v2.0 compliant
 - Cloudflare Workers runtime compatible

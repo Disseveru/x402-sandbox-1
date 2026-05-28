@@ -25,6 +25,7 @@
 		"x402-hono": "1.0.0"
 	},
 	"devDependencies": {
+		"@types/node": "^25.9.1",
 		"@typescript-eslint/eslint-plugin": "8.50.0",
 		"@typescript-eslint/parser": "8.50.0",
 		"eslint": "9.39.2",
