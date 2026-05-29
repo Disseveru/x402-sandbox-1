@@ -1,7 +1,11 @@
 import "./tools";
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
-import { createProtectedRoute, type ProtectedRouteConfig } from "./auth";
+import {
+	createProtectedRoute,
+	extractPathParams,
+	type ProtectedRouteConfig,
+} from "./auth";
 import { generateJWT } from "./jwt";
 import { hasBotManagementException } from "./bot-management";
 import type { AppContext, Env } from "./env";
@@ -53,7 +57,7 @@ async function proxyToOrigin(request: Request, env: Env): Promise<Response> {
 					statusText: response.statusText,
 					headers: newHeaders,
 				});
-			} catch { }
+			} catch {}
 		}
 		return response;
 	}
@@ -61,18 +65,18 @@ async function proxyToOrigin(request: Request, env: Env): Promise<Response> {
 	return fetch(request);
 }
 
-function normalizeRoutePath(path: string): string {
-	if (path === "/") return path;
-	return path.replace(/\/+$/, "") || "/";
-}
-
+/**
+ * Check if a path matches a pattern
+ * Now supports dynamic routes with :param syntax and /* wildcards
+ *
+ * @param path - Request path to check
+ * @param pattern - Route pattern (e.g., "/users/:id", "/premium/*")
+ * @returns True if path matches pattern
+ */
 function pathMatchesPattern(path: string, pattern: string): boolean {
-	const normalizedPath = normalizeRoutePath(path);
-	if (pattern.endsWith("/*")) {
-		const base = normalizeRoutePath(pattern.slice(0, -2));
-		return normalizedPath === base || normalizedPath.startsWith(`${base}/`);
-	}
-	return normalizedPath === normalizeRoutePath(pattern);
+	// Use extractPathParams to check if path matches pattern
+	const params = extractPathParams(path, pattern);
+	return params !== null;
 }
 
 function findProtectedRouteConfig(
@@ -80,7 +84,9 @@ function findProtectedRouteConfig(
 	patterns: ProtectedRouteConfig[]
 ): ProtectedRouteConfig | null {
 	const allRoutes = [...BUILTIN_PROTECTED_PATHS, ...patterns];
-	return allRoutes.find((config) => pathMatchesPattern(path, config.pattern)) ?? null;
+	return (
+		allRoutes.find((config) => pathMatchesPattern(path, config.pattern)) ?? null
+	);
 }
 
 // ROOT ROUTE — prevents proxy loop on workers.dev
@@ -116,7 +122,8 @@ app.use("*", async (c, next) => {
 		if (!c.env.JWT_SECRET) {
 			return c.json(
 				{
-					error: "Server misconfigured: JWT_SECRET not set. See README for setup instructions.",
+					error:
+						"Server misconfigured: JWT_SECRET not set. See README for setup instructions.",
 				},
 				500
 			);
@@ -226,4 +233,3 @@ app.get("/__x402/protected", (c) => {
 });
 
 export default app;
-				

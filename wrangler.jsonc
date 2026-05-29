@@ -14,6 +14,7 @@
 	"name": "cloudflare-setup-x402",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-10-08",
+	"compatibility_flags": ["nodejs_compat"],
 	"account_id": "08aac2eadaaa0d5cfd8b771ae4c8e46c",
 	"observability": {
 		"logs": {
@@ -82,7 +83,67 @@
 		// After payment, users receive a JWT cookie valid for 1 hour,
 		// allowing access to all paid services without additional payments.
 		//
+		// ===== x402 v2 Dynamic Routes =====
+		// NEW in v2: Support for parameterized routes (e.g., "/users/:id")
+		// - Use :param syntax for dynamic segments (e.g., "/weather/:city")
+		// - Add pathParamsSchema for Bazaar discovery
+		// - Add mimeType, outputExample, serviceName, tags, iconUrl for metadata
+		// - Multiple param values map to same catalog entry via routeTemplate
+		//
 		"PROTECTED_PATTERNS": [
+			// ─────────────────────────────────────────────────────────────────
+			// EXAMPLE: DYNAMIC ROUTE WITH BAZAAR DISCOVERY (v2)
+			// ─────────────────────────────────────────────────────────────────
+			// Uncomment to enable a weather API example with dynamic city param
+			// All requests like /weather/tokyo, /weather/london map to /weather/:city
+			//
+			// {
+			// 	"pattern": "/weather/:city",
+			// 	"price": "$0.001",
+			// 	"description": "Weather data for a city",
+			// 	"mimeType": "application/json",
+			// 	"pathParamsSchema": {
+			// 		"properties": {
+			// 			"city": { "type": "string", "description": "City name slug" }
+			// 		},
+			// 		"required": ["city"]
+			// 	},
+			// 	"outputExample": {
+			// 		"city": "tokyo",
+			// 		"weather": "rainy",
+			// 		"temperature": 65
+			// 	},
+			// 	"serviceName": "Weather API",
+			// 	"tags": ["weather", "data", "real-time"],
+			// 	"iconUrl": "https://example.com/weather-icon.png"
+			// },
+			//
+			// ─────────────────────────────────────────────────────────────────
+			// EXAMPLE: MULTI-PARAMETER DYNAMIC ROUTE (v2)
+			// ─────────────────────────────────────────────────────────────────
+			// Multiple path parameters: /weather/:country/:city
+			// Param names matched by position in URL, not declaration order
+			//
+			// {
+			// 	"pattern": "/weather/:country/:city",
+			// 	"price": "$0.001",
+			// 	"description": "Weather data for city in specific country",
+			// 	"mimeType": "application/json",
+			// 	"pathParamsSchema": {
+			// 		"properties": {
+			// 			"country": { "type": "string", "description": "Country code" },
+			// 			"city": { "type": "string", "description": "City name slug" }
+			// 		},
+			// 		"required": ["country", "city"]
+			// 	},
+			// 	"outputExample": {
+			// 		"country": "us",
+			// 		"city": "san-francisco",
+			// 		"weather": "foggy",
+			// 		"temperature": 60
+			// 	}
+			// },
+			//
 			// ─────────────────────────────────────────────────────────────────
 			// AI-POWERED SIMULATION SANDBOX
 			// Shadow State Sandbox - verify transactions before execution

@@ -6,6 +6,7 @@
  */
 
 import type { JWTPayload } from "./jwt";
+import type { PathParams } from "./auth";
 
 export interface Env extends CloudflareBindings {
 	/** Secret for signing JWT tokens - set via .dev.vars locally or `wrangler secret put` in production */
@@ -25,5 +26,6 @@ export interface AppContext {
 	Bindings: Env;
 	Variables: {
 		auth?: JWTPayload;
+		pathParams?: PathParams;
 	};
 }
