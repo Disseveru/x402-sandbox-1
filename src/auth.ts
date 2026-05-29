@@ -217,7 +217,7 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 		// Create facilitator client with CDP facilitator
 		const facilitatorUrl =
 			c.env.FACILITATOR_URL ||
-			"https://api.cdp.coinbase.com/platform/v2/x402";
+			"https://api.cdp.coinbase.com/platform/v2/x402/facilitator";
 		const facilitatorClient = new HTTPFacilitatorClient({
 			url: facilitatorUrl,
 		});

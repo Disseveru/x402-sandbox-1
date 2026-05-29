@@ -222,7 +222,7 @@
 		// CDP v2 facilitator for Base mainnet payment settlement
 		// See: https://docs.cdp.coinbase.com/cdp-apis/docs/x402-facilitator
 		//
-		"FACILITATOR_URL": "https://api.cdp.coinbase.com/platform/v2/x402",
+		"FACILITATOR_URL": "https://api.cdp.coinbase.com/platform/v2/x402/facilitator",
 	},
 	// =========================================================================
 	// SECRETS CONFIGURATION
