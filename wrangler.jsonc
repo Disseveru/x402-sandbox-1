@@ -240,8 +240,14 @@
 	//     - Get key: https://x.ai
 	//
 	//   wrangler secret put CDP_API_KEY
-	//     - Purpose: Enable CDP Bazaar registration for service discovery
+	//     - Purpose: Enable CDP Bazaar registration and wallet operations
 	//     - Get key: https://portal.cdp.coinbase.com
+	//
+	//   wrangler secret put CDP_PRIVATE_KEY
+	//     - Purpose: Enable CDP wallet operations (send funds, check balances)
+	//     - Format: Your CDP API private key as a string
+	//     - Required for: /api/wallet/send, /api/wallet/info endpoints
+	//     - Use case: Send validation payments for agentic.market registration
 	//
 	// See: https://developers.cloudflare.com/workers/configuration/secrets/
 	// =========================================================================

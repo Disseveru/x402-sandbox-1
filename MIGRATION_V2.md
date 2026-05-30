@@ -9,6 +9,7 @@ This repository is **fully compliant with x402 v2** specification and includes s
 v2 introduces parameterized routes using `:param` syntax, enabling catalog normalization where multiple concrete URLs map to a single route template.
 
 **Example:**
+
 - `/weather/tokyo`, `/weather/london`, `/weather/paris` all map to `/weather/:city`
 - Facilitators use the route template as catalog key for discovery
 
@@ -30,6 +31,7 @@ Wildcards (`/*`) are automatically converted to named parameters (`:var1`) for c
 ## Migration Status
 
 ✅ **Fully Migrated** - This repository uses:
+
 - `@x402/hono: ^2.13.0`
 - `@x402/core: ^2.13.0`
 - `@x402/evm: ^2.13.0`
@@ -41,9 +43,9 @@ Wildcards (`/*`) are automatically converted to named parameters (`:var1`) for c
 
 ```jsonc
 {
-  "pattern": "/users/:id",
-  "price": "$0.01",
-  "description": "Get user profile by ID"
+	"pattern": "/users/:id",
+	"price": "$0.01",
+	"description": "Get user profile by ID",
 }
 ```
 
@@ -51,24 +53,24 @@ Wildcards (`/*`) are automatically converted to named parameters (`:var1`) for c
 
 ```jsonc
 {
-  "pattern": "/weather/:city",
-  "price": "$0.001",
-  "description": "Weather data for a city",
-  "mimeType": "application/json",
-  "pathParamsSchema": {
-    "properties": {
-      "city": { "type": "string", "description": "City name slug" }
-    },
-    "required": ["city"]
-  },
-  "outputExample": {
-    "city": "tokyo",
-    "weather": "rainy",
-    "temperature": 65
-  },
-  "serviceName": "Weather API",
-  "tags": ["weather", "data", "real-time"],
-  "iconUrl": "https://example.com/weather-icon.png"
+	"pattern": "/weather/:city",
+	"price": "$0.001",
+	"description": "Weather data for a city",
+	"mimeType": "application/json",
+	"pathParamsSchema": {
+		"properties": {
+			"city": { "type": "string", "description": "City name slug" },
+		},
+		"required": ["city"],
+	},
+	"outputExample": {
+		"city": "tokyo",
+		"weather": "rainy",
+		"temperature": 65,
+	},
+	"serviceName": "Weather API",
+	"tags": ["weather", "data", "real-time"],
+	"iconUrl": "https://example.com/weather-icon.png",
 }
 ```
 
@@ -76,23 +78,23 @@ Wildcards (`/*`) are automatically converted to named parameters (`:var1`) for c
 
 ```jsonc
 {
-  "pattern": "/weather/:country/:city",
-  "price": "$0.001",
-  "description": "Weather data for city in specific country",
-  "mimeType": "application/json",
-  "pathParamsSchema": {
-    "properties": {
-      "country": { "type": "string", "description": "Country code" },
-      "city": { "type": "string", "description": "City name slug" }
-    },
-    "required": ["country", "city"]
-  },
-  "outputExample": {
-    "country": "us",
-    "city": "san-francisco",
-    "weather": "foggy",
-    "temperature": 60
-  }
+	"pattern": "/weather/:country/:city",
+	"price": "$0.001",
+	"description": "Weather data for city in specific country",
+	"mimeType": "application/json",
+	"pathParamsSchema": {
+		"properties": {
+			"country": { "type": "string", "description": "Country code" },
+			"city": { "type": "string", "description": "City name slug" },
+		},
+		"required": ["country", "city"],
+	},
+	"outputExample": {
+		"country": "us",
+		"city": "san-francisco",
+		"weather": "foggy",
+		"temperature": 60,
+	},
 }
 ```
 
@@ -130,6 +132,7 @@ All requests to parameterized routes map to the same catalog entry:
 ```
 
 This allows:
+
 - Single payment for route template (not per city)
 - Consolidated discovery in Bazaar
 - Efficient catalog management
@@ -152,6 +155,7 @@ npm test
 ```
 
 Test coverage includes:
+
 - ✅ Pattern to route template conversion
 - ✅ Single path parameter extraction
 - ✅ Multiple path parameter extraction
@@ -165,27 +169,27 @@ Test coverage includes:
 
 ```typescript
 interface ProtectedRouteConfig {
-  // Required fields
-  pattern: string;              // "/users/:id" or "/premium/*"
-  price: string;                // "$0.01"
-  description: string;          // Human-readable description
+	// Required fields
+	pattern: string; // "/users/:id" or "/premium/*"
+	price: string; // "$0.01"
+	description: string; // Human-readable description
 
-  // Bot Management (optional)
-  bot_score_threshold?: number;
-  except_detection_ids?: number[];
+	// Bot Management (optional)
+	bot_score_threshold?: number;
+	except_detection_ids?: number[];
 
-  // Bazaar Discovery (optional)
-  mimeType?: string;            // "application/json"
-  pathParamsSchema?: {
-    properties: Record<string, { type: string; description?: string }>;
-    required?: string[];
-  };
-  outputExample?: unknown;       // Example response
+	// Bazaar Discovery (optional)
+	mimeType?: string; // "application/json"
+	pathParamsSchema?: {
+		properties: Record<string, { type: string; description?: string }>;
+		required?: string[];
+	};
+	outputExample?: unknown; // Example response
 
-  // Service Metadata (optional)
-  serviceName?: string;          // ≤ 32 chars
-  tags?: string[];               // Up to 5, each ≤ 32 chars
-  iconUrl?: string;              // HTTPS URL, ≤ 2048 chars
+	// Service Metadata (optional)
+	serviceName?: string; // ≤ 32 chars
+	tags?: string[]; // Up to 5, each ≤ 32 chars
+	iconUrl?: string; // HTTPS URL, ≤ 2048 chars
 }
 ```
 
@@ -193,14 +197,14 @@ interface ProtectedRouteConfig {
 
 ```typescript
 // Convert pattern to route template
-patternToRouteTemplate("/weather/:city") // → "/weather/:city"
-patternToRouteTemplate("/premium/*")      // → "/premium/:var1"
+patternToRouteTemplate("/weather/:city"); // → "/weather/:city"
+patternToRouteTemplate("/premium/*"); // → "/premium/:var1"
 
 // Extract path parameters
-extractPathParams("/users/123", "/users/:id")
+extractPathParams("/users/123", "/users/:id");
 // → { id: "123" }
 
-extractPathParams("/weather/us/sf", "/weather/:country/:city")
+extractPathParams("/weather/us/sf", "/weather/:country/:city");
 // → { country: "us", city: "sf" }
 ```
 

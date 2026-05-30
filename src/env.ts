@@ -19,6 +19,10 @@ export interface Env extends CloudflareBindings {
 	ORIGIN_URL?: string;
 	/** Optional: Service Binding to origin Worker */
 	ORIGIN_SERVICE?: Fetcher;
+	/** Optional: CDP API Key for Coinbase Developer Platform integration */
+	CDP_API_KEY?: string;
+	/** Optional: CDP Private Key for wallet operations (JSON string) */
+	CDP_PRIVATE_KEY?: string;
 }
 
 /** Full app context type for Hono */
