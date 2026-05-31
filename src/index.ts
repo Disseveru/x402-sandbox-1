@@ -149,10 +149,13 @@ app.use("*", async (c, next) => {
 			}
 		});
 
+		// If middleware returned a response (e.g., 402 Payment Required), return it immediately
+		// This ensures x402 v2 spec compliance with PAYMENT-REQUIRED header
 		if (result) {
 			return result;
 		}
 
+		// If the response is set and it's an error (including 402), return it
 		if (c.res && c.res.status >= 400) {
 			return c.res;
 		}
@@ -330,9 +333,7 @@ app.post("/api/wallet/send", async (c) => {
 
 			// Verify this is the expected wallet address
 			const expectedAddress = "0x451ab8d06B6EF38416312Fe4261B1A56dD2EAF1d";
-			if (
-				account.address.toLowerCase() !== expectedAddress.toLowerCase()
-			) {
+			if (account.address.toLowerCase() !== expectedAddress.toLowerCase()) {
 				console.warn(
 					`Warning: Using account ${account.address} instead of expected ${expectedAddress}`
 				);
