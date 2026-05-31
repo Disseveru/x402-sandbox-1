@@ -12,6 +12,27 @@ import type { AppContext, Env } from "./env";
 
 const app = new Hono<AppContext>();
 
+// Global error boundary for runtime exceptions
+app.onError((err, c) => {
+	console.error("Runtime error:", err);
+
+	// Structured error response for x402 compliance
+	const status = err.message.includes("Unauthorized") || err.message.includes("payment")
+		? 402
+		: 500;
+
+	return c.json(
+		{
+			error: true,
+			message: err.message || "Internal server error",
+			status,
+			timestamp: new Date().toISOString(),
+		},
+		status
+	);
+});
+
+
 const BUILTIN_PROTECTED_PATHS: ProtectedRouteConfig[] = [
 	{
 		pattern: "/__x402/protected",
