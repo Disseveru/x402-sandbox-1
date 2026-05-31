@@ -140,7 +140,7 @@ export function extractPathParams(
 
 	// Handle /* wildcard first - convert to named param
 	if (regexPattern.endsWith("/*")) {
-		regexPattern = regexPattern.slice(0, -2) + "/(.*)";
+		regexPattern = regexPattern.slice(0, -2) + "(?:/(.*))?";
 		paramNames.push("var1");
 	} else {
 		// Handle :param syntax
@@ -166,7 +166,7 @@ export function extractPathParams(
 	// Build params object
 	const params: PathParams = {};
 	paramNames.forEach((name, index) => {
-		params[name] = match[index + 1];
+		params[name] = match[index + 1] ?? "";
 	});
 
 	return params;

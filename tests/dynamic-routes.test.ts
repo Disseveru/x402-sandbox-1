@@ -59,6 +59,11 @@ describe("Dynamic Routes - x402 v2", () => {
 			assert.deepStrictEqual(params, { var1: "content/video.mp4" });
 		});
 
+		it("should match wildcard route base path", () => {
+			const params = extractPathParams("/premium", "/premium/*");
+			assert.deepStrictEqual(params, { var1: "" });
+		});
+
 		it("should return empty object for exact match with no params", () => {
 			const params = extractPathParams("/api/simulate", "/api/simulate");
 			assert.deepStrictEqual(params, {});
