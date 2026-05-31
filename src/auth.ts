@@ -97,6 +97,38 @@ export interface PathParams {
 }
 
 /**
+ * x402 v2 Bazaar extension configuration
+ */
+interface BazaarExtensionConfig {
+	pathParamsSchema?: {
+		properties: Record<string, { type: string; description?: string }>;
+		required?: string[];
+	};
+	output?: { example: unknown };
+	serviceName?: string;
+	tags?: string[];
+	iconUrl?: string;
+}
+
+/**
+ * x402 v2 route configuration
+ */
+interface X402RouteConfig {
+	accepts: {
+		scheme: "exact";
+		price: string;
+		network: `${string}:${string}`;
+		payTo: `0x${string}`;
+		maxTimeoutSeconds: number;
+	};
+	description: string;
+	mimeType?: string;
+	extensions?: {
+		"bazaar.coinbase.com"?: BazaarExtensionConfig;
+	};
+}
+
+/**
  * Convert route pattern to route template for x402 v2
  * Converts /users/:id to /users/:id (already v2 format)
  * Converts /users/* to /users/:var1 (wildcard to named param)
@@ -193,6 +225,7 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 		const pathParams = extractPathParams(routePath, config.pattern);
 		if (pathParams && Object.keys(pathParams).length > 0) {
 			// Store path params in context for handlers to use
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			c.set("pathParams" as any, pathParams);
 		}
 
@@ -226,7 +259,7 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 
 		// Create route configuration for x402 v2
 		const routeKey = `${method} ${routeTemplate}`;
-		const routeConfig: any = {
+		const routeConfig: X402RouteConfig = {
 			accepts: {
 				scheme: "exact" as const,
 				price: config.price,
@@ -250,7 +283,7 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 			config.tags ||
 			config.iconUrl
 		) {
-			const extensionConfig: any = {};
+			const extensionConfig: BazaarExtensionConfig = {};
 
 			// Add path params schema
 			if (config.pathParamsSchema) {

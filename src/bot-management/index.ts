@@ -63,9 +63,8 @@ export function hasBotManagementException(
 
 	// Check 2: Is this an excepted bot? (detection ID in exception list)
 	if (config.except_detection_ids && config.except_detection_ids.length > 0) {
-		const isExcepted = detectionIds.some((id) =>
-			config.except_detection_ids!.includes(id)
-		);
+		const exceptionList = config.except_detection_ids;
+		const isExcepted = detectionIds.some((id) => exceptionList.includes(id));
 		if (isExcepted) {
 			return true; // Excepted bot - bypass payment
 		}
